@@ -1,4 +1,8 @@
-# Google API Keys
+# FJ Chat Voice - Text to Speech
+
+![alt text](./docs/app_0.png)
+
+## Google API Key
 
 ### 1. Create new project
 
@@ -18,6 +22,20 @@ Google Console > APIs & Services > Credentials > Create credentials > API key
 ![alt text](./docs/console_api_key_2.png)
 
 # Build
+
+## Linux
+
+```
+sudo apt update && sudo apt install python3-tk
+python -m venv --system-site-packages .venv
+source .venv/bin/activate
+pip install pyinstaller pyinstaller-versionfile
+python build.py
+```
+
+## Windows
+
+Uncomment tkinter in requirements.txt
 
 ```
 pip install pyinstaller pyinstaller-versionfile
