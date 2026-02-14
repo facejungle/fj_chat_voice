@@ -1,3 +1,4 @@
+import locale
 from pathlib import Path
 import sys
 import time
@@ -25,13 +26,22 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
+default_locale = locale.getlocale()
+print(f"Detected system locale: {default_locale}")
+
 BUFFER_SIZE = 15
 PAD = 10
 PAD_L = 20
 FONT_SZ = 12
 FONT_SZ_L = 18
 BG_COLOR = "#000"
-DEFAULT_LANGUAGE = "English"
+DEFAULT_LANGUAGE = (
+    "Russian"
+    if default_locale
+    and default_locale[0]
+    and (default_locale[0].startswith("Russian") or default_locale[0].startswith("ru_"))
+    else "English"
+)
 GUI_LANGUAGES = ("English", "Russian")
 VOICES = {
     "Russian": ("xenia", "aidar", "baya", "kseniya", "eugene"),
