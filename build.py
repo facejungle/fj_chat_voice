@@ -76,12 +76,7 @@ def create_virtual_env():
     if not os.path.exists(venv_path):
         print(f"📦 Creating virtual environment at {venv_path}...")
         try:
-            if platform.system() == "Windows":
-                subprocess.run([sys.executable, "-m", "venv", venv_path], check=True)
-            else:
-                import tkinter
-
-                subprocess.run([sys.executable, "-m", "venv", "--system-site-packages", venv_path], check=True)
+            subprocess.run([sys.executable, "-m", "venv", venv_path], check=True)
             print("✓ Virtual environment created")
         except subprocess.CalledProcessError as e:
             print(f"❌ Failed to create virtual environment: {e}")
