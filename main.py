@@ -31,14 +31,53 @@ PAD_L = 20
 FONT_SZ = 12
 FONT_SZ_L = 18
 BG_COLOR = "#000"
+DEFAULT_LANGUAGE = "English"
+GUI_LANGUAGES = ("English", "Russian")
+VOICES = {
+    "Russian": ("xenia", "aidar", "baya", "kseniya", "eugene"),
+    "English": (
+        "random",
+        "en_0",
+        "en_1",
+        "en_2",
+        "en_3",
+        "en_4",
+        "en_5",
+        "en_6",
+        "en_7",
+        "en_8",
+        "en_9",
+        "en_10",
+        "en_11",
+        "en_12",
+        "en_13",
+        "en_14",
+        "en_15",
+        "en_16",
+        "en_17",
+        "en_18",
+        "en_19",
+        "en_20",
+    ),
+}
 
 
 class FJChatVoice:
     def __init__(self):
         self.window = ctk.CTk(fg_color=BG_COLOR)
-        self.window.title("FJ Chat Voice - Silero TTS")
         self.window.geometry("1200x800")
         self.window.resizable(False, False)
+
+        self.gui_language = DEFAULT_LANGUAGE
+
+        # translation helper
+        self._ = lambda k: TRANSLATIONS.get(self.gui_language, {}).get(k, k)
+
+        # set window title after helper is available
+        try:
+            self.window.title(self._("app_title"))
+        except Exception:
+            pass
 
         # State variables
         self.is_running_yt = False
@@ -68,7 +107,8 @@ class FJChatVoice:
         self.silero_available = False
         self.device = torch.device("cpu")
         self.sample_rate = 48000
-        self.speaker = "xenia"
+        self.chat_language = DEFAULT_LANGUAGE
+        self.speaker = VOICES[self.chat_language][0]
         self.put_accent = True
         self.put_yo = True
         self.speech_rate = 1.0
@@ -121,8 +161,8 @@ class FJChatVoice:
         self.tabview.pack(fill="both", expand=True)
 
         # Tabs
-        self.tab_main = self.tabview.add("📺 Chat")
-        self.tab_settings = self.tabview.add("⚙️ Settings")
+        self.tab_main = self.tabview.add(self._("tab_chat"))
+        self.tab_settings = self.tabview.add(self._("tab_settings"))
 
         self.setup_status_bar()
 
@@ -135,7 +175,9 @@ class FJChatVoice:
 
         # Real-time statistics
         self.stats_label = ctk.CTkLabel(
-            self.status_bar, text="📊 Messages: 0 | Spoken: 0 | Spam: 0 | In queue: 0", font=ctk.CTkFont(size=FONT_SZ)
+            self.status_bar,
+            text=f"{self._('Messages')}: 0 | {self._('Spoken')}: 0 | {self._('Spam')}: 0 | {self._('In queue')}: 0",
+            font=ctk.CTkFont(size=FONT_SZ),
         )
         self.stats_label.pack(side="left", pady=(0, 5), padx=PAD)
 
@@ -149,7 +191,7 @@ class FJChatVoice:
         volume_frame = ctk.CTkFrame(self.status_bar, bg_color=BG_COLOR, fg_color=BG_COLOR)
         volume_frame.pack(side="right", padx=(PAD, 0))
 
-        ctk.CTkLabel(volume_frame, text="Volume:", font=ctk.CTkFont(size=FONT_SZ)).pack(side="left")
+        ctk.CTkLabel(volume_frame, text=self._("Volume"), font=ctk.CTkFont(size=FONT_SZ)).pack(side="left")
 
         self.volume_var = ctk.DoubleVar(value=self.volume)
         self.volume_slider = ctk.CTkSlider(
@@ -165,7 +207,7 @@ class FJChatVoice:
         speed_frame = ctk.CTkFrame(self.status_bar, bg_color=BG_COLOR, fg_color=BG_COLOR)
         speed_frame.pack(side="right")
 
-        ctk.CTkLabel(speed_frame, text="Speech rate:", font=ctk.CTkFont(size=FONT_SZ)).pack(side="left")
+        ctk.CTkLabel(speed_frame, text=self._("Speech rate"), font=ctk.CTkFont(size=FONT_SZ)).pack(side="left")
 
         self.speed_var = ctk.DoubleVar(value=self.speech_rate)
         self.speed_slider = ctk.CTkSlider(
@@ -191,7 +233,7 @@ class FJChatVoice:
         connection_frame = ctk.CTkFrame(self.top_frame, fg_color=BG_COLOR, bg_color=BG_COLOR)
         connection_frame.pack(fill="x")
 
-        ctk.CTkLabel(connection_frame, text="YouTube URL / ID", font=ctk.CTkFont(size=FONT_SZ), width=150).pack(
+        ctk.CTkLabel(connection_frame, text=self._("YouTube URL / ID"), font=ctk.CTkFont(size=FONT_SZ), width=150).pack(
             side="left", padx=PAD
         )
 
@@ -203,11 +245,9 @@ class FJChatVoice:
 
         self.connect_btn_yt = ctk.CTkButton(
             connection_frame,
-            text="Connect",
+            text=self._("Connect"),
             width=100,
             command=self.toggle_connection_yt,
-            # fg_color="#28a745",
-            # hover_color="#218838",
         )
         self.connect_btn_yt.pack(side="left")
 
@@ -224,13 +264,15 @@ class FJChatVoice:
         chat_header_frame = ctk.CTkFrame(self.chat_frame, fg_color=BG_COLOR, bg_color=BG_COLOR)
         chat_header_frame.pack(fill="x", padx=PAD, pady=PAD)
 
-        ctk.CTkLabel(chat_header_frame, text="💬 Message Log", font=ctk.CTkFont(size=FONT_SZ, weight="bold")).pack(
-            side="left"
-        )
+        ctk.CTkLabel(
+            chat_header_frame, text=self._("Message Log"), font=ctk.CTkFont(size=FONT_SZ_L, weight="bold")
+        ).pack(side="left")
 
         # Auto-scroll checkbox
         self.auto_scroll_var = ctk.BooleanVar(value=self.auto_scroll)
-        self.auto_scroll_check = ctk.CTkCheckBox(chat_header_frame, text="Auto-scroll", variable=self.auto_scroll_var)
+        self.auto_scroll_check = ctk.CTkCheckBox(
+            chat_header_frame, text=self._("Auto-scroll"), variable=self.auto_scroll_var
+        )
         self.auto_scroll_check.pack(side="left", padx=(PAD, 0))
 
         # Bottom panel
@@ -239,21 +281,17 @@ class FJChatVoice:
 
         self.clear_btn = ctk.CTkButton(
             bottom_frame,
-            text="🧹 Clear log",
+            text=self._("Clear log"),
             width=100,
             command=self.clear_chat,
-            # fg_color="#6c757d",
-            # hover_color="#5a6268",
         )
         self.clear_btn.pack(side="left")
 
         self.export_btn = ctk.CTkButton(
             bottom_frame,
-            text="💾 Export log",
+            text=self._("Export log"),
             width=100,
             command=self.export_chat_log,
-            # fg_color="#17a2b8",
-            # hover_color="#138496",
         )
         self.export_btn.pack(side="left", padx=(PAD, 0))
 
@@ -277,35 +315,37 @@ class FJChatVoice:
 
         language_frame = ctk.CTkFrame(left_frame, fg_color=BG_COLOR, bg_color=BG_COLOR)
         language_frame.pack(pady=(PAD, PAD_L), padx=PAD, fill="x", side="top", anchor="n")
-        ctk.CTkLabel(language_frame, text="Language", font=ctk.CTkFont(size=FONT_SZ_L)).pack(side="left")
-        language_select = ctk.CTkOptionMenu(language_frame, values=["English", "Russian"])
-        language_select.set("English")
+        ctk.CTkLabel(language_frame, text=self._("Language"), font=ctk.CTkFont(size=FONT_SZ_L)).pack(side="left")
+        language_select = ctk.CTkOptionMenu(language_frame, values=GUI_LANGUAGES, command=self.change_gui_language)
+        language_select.set(self.gui_language)
         language_select.pack(side="right")
 
         credentials_frame = ctk.CTkFrame(left_frame, fg_color=BG_COLOR, bg_color=BG_COLOR)
         credentials_frame.pack(pady=(PAD, PAD_L), padx=PAD, fill="x", side="top", anchor="n")
-        ctk.CTkLabel(credentials_frame, text="Credentials", font=ctk.CTkFont(size=FONT_SZ_L), anchor="nw").pack(
+        ctk.CTkLabel(credentials_frame, text=self._("Credentials"), font=ctk.CTkFont(size=FONT_SZ_L), anchor="nw").pack(
             expand=True, fill="x", anchor="n"
         )
 
         yt_cred_frame = ctk.CTkFrame(credentials_frame, fg_color=BG_COLOR, bg_color=BG_COLOR)
         yt_cred_frame.pack(fill="x", expand=True, side="top", anchor="n", pady=(0, PAD))
-        ctk.CTkLabel(yt_cred_frame, text="Google API Key", font=ctk.CTkFont(size=FONT_SZ), width=150).pack(side="left")
+        ctk.CTkLabel(yt_cred_frame, text=self._("Google API Key"), font=ctk.CTkFont(size=FONT_SZ), width=150).pack(
+            side="left"
+        )
         self.api_entry_yt = ctk.CTkEntry(yt_cred_frame, width=200, placeholder_text="Enter your API key")
         self.api_entry_yt.pack(side="left", fill="x", expand=True)
         self.api_entry_yt.insert(0, self.api_key_yt)
-        self.save_api_btn_yt = ctk.CTkButton(yt_cred_frame, text="Save", width=100, command=self.save_yt_api_key)
+        self.save_api_btn_yt = ctk.CTkButton(yt_cred_frame, text="Save", width=100, command=self.save_api_key_yt)
         self.save_api_btn_yt.pack(side="right", padx=(PAD, 0))
 
         tw_cred_frame = ctk.CTkFrame(credentials_frame, fg_color=BG_COLOR, bg_color=BG_COLOR)
         tw_cred_frame.pack(fill="x", expand=True, side="top", anchor="n")
-        ctk.CTkLabel(tw_cred_frame, text="Another credentials", font=ctk.CTkFont(size=FONT_SZ), width=150).pack(
+        ctk.CTkLabel(tw_cred_frame, text=self._("Another credentials"), font=ctk.CTkFont(size=FONT_SZ), width=150).pack(
             side="left"
         )
         self.tw_api_entry = ctk.CTkEntry(tw_cred_frame, width=200, placeholder_text="Enter your API key")
         self.tw_api_entry.pack(side="left", fill="x", expand=True)
         self.tw_api_entry.insert(0, self.api_key_yt)
-        self.save_tw_api_btn = ctk.CTkButton(tw_cred_frame, text="Save", width=100, command=self.save_yt_api_key)
+        self.save_tw_api_btn = ctk.CTkButton(tw_cred_frame, text="Save", width=100, command=self.save_api_key_yt)
         self.save_tw_api_btn.pack(side="right", padx=(PAD, 0))
 
         # = Silero model =
@@ -316,56 +356,54 @@ class FJChatVoice:
         silero_label_frame = ctk.CTkFrame(silero_frame, fg_color=BG_COLOR, bg_color=BG_COLOR)
         silero_label_frame.pack(fill="x", pady=(0, PAD), expand=True)
 
-        ctk.CTkLabel(silero_label_frame, text="Silero model", font=ctk.CTkFont(size=FONT_SZ_L)).pack(side="left")
+        ctk.CTkLabel(silero_label_frame, text=self._("Silero model"), font=ctk.CTkFont(size=FONT_SZ_L)).pack(
+            side="left"
+        )
         self.tts_status_label = ctk.CTkLabel(
-            silero_label_frame, text="⚪ Silero not loaded", font=ctk.CTkFont(size=FONT_SZ)
+            silero_label_frame, text=self._("Silero not loaded"), font=ctk.CTkFont(size=FONT_SZ)
         )
         self.tts_status_label.pack(side="right")
-        # self.init_tts_btn = ctk.CTkButton(
-        #     silero_frame,
-        #     text="📥 Load Silero model",
-        #     command=self.init_silero,
-        #     width=100,
-        #     font=ctk.CTkFont(size=FONT_SZ),
-        # )
-        # self.init_tts_btn.pack(side="left", fill="x")
 
         model_cfg_frame = ctk.CTkFrame(silero_frame, fg_color=BG_COLOR, bg_color=BG_COLOR)
         model_cfg_frame.pack(fill="x", pady=(0, PAD))
         # Language selection
         model_language_select_frame = ctk.CTkFrame(model_cfg_frame, fg_color=BG_COLOR, bg_color=BG_COLOR)
         model_language_select_frame.pack(side="left")
-        ctk.CTkLabel(model_language_select_frame, text="Chat language", font=ctk.CTkFont(size=FONT_SZ), width=150).pack(
-            side="left"
+        ctk.CTkLabel(
+            model_language_select_frame, text=self._("Chat language"), font=ctk.CTkFont(size=FONT_SZ), width=150
+        ).pack(side="left")
+        model_language_select = ctk.CTkOptionMenu(
+            model_language_select_frame, values=list(VOICES.keys()), command=self.init_silero
         )
-        model_language_select = ctk.CTkOptionMenu(model_language_select_frame, values=["English", "Russian"])
-        model_language_select.set("Russian")
+        model_language_select.set(self.chat_language)
         model_language_select.pack(side="left")
         # Voice selection
         voice_select_frame = ctk.CTkFrame(model_cfg_frame, fg_color=BG_COLOR, bg_color=BG_COLOR)
         voice_select_frame.pack(side="left")
-        ctk.CTkLabel(voice_select_frame, text="Voice", font=ctk.CTkFont(size=FONT_SZ), width=150).pack(side="left")
+        ctk.CTkLabel(voice_select_frame, text=self._("Voice"), font=ctk.CTkFont(size=FONT_SZ), width=150).pack(
+            side="left"
+        )
         self.voice_var = ctk.StringVar(value=self.speaker)
-        self.voice_combo = ctk.CTkOptionMenu(
+        self.voice_options = ctk.CTkOptionMenu(
             voice_select_frame,
-            values=["xenia", "aidar", "baya", "kseniya", "eugene"],
+            values=VOICES[self.chat_language],
             variable=self.voice_var,
             command=self.change_voice,
         )
-        self.voice_combo.pack(side="left")
+        self.voice_options.pack(side="left")
 
         options_frame = ctk.CTkFrame(silero_frame, fg_color=BG_COLOR, bg_color=BG_COLOR)
         options_frame.pack(fill="x", pady=(0, PAD))
 
         self.put_accent_var = ctk.BooleanVar(value=self.put_accent)
         self.put_accent_check = ctk.CTkCheckBox(
-            options_frame, text="Add accents", variable=self.put_accent_var, command=self.toggle_accent
+            options_frame, text=self._("Add accents"), variable=self.put_accent_var, command=self.toggle_accent
         )
         self.put_accent_check.pack(side="left", padx=(0, PAD))
 
         self.put_yo_var = ctk.BooleanVar(value=self.put_yo)
         self.put_yo_check = ctk.CTkCheckBox(
-            options_frame, text="Replace e with yo (Russian)", variable=self.put_yo_var, command=self.toggle_yo
+            options_frame, text=self._("Replace e with yo (Russian)"), variable=self.put_yo_var, command=self.toggle_yo
         )
         self.put_yo_check.pack(side="left")
 
@@ -374,14 +412,14 @@ class FJChatVoice:
         buffer_frame = ctk.CTkFrame(left_frame, fg_color=BG_COLOR, bg_color=BG_COLOR)
         buffer_frame.pack(pady=PAD, padx=PAD, fill="x", side="top", anchor="n")
 
-        ctk.CTkLabel(buffer_frame, text="Message Queue", font=ctk.CTkFont(size=FONT_SZ_L), anchor="nw").pack(
+        ctk.CTkLabel(buffer_frame, text=self._("Message Queue"), font=ctk.CTkFont(size=FONT_SZ_L), anchor="nw").pack(
             expand=True, fill="x", anchor="n"
         )
 
         buffer_size_frame = ctk.CTkFrame(buffer_frame, fg_color=BG_COLOR, bg_color=BG_COLOR)
         buffer_size_frame.pack(fill="x")
 
-        ctk.CTkLabel(buffer_size_frame, text="Queue depth:", font=ctk.CTkFont(size=13)).pack(side="left")
+        ctk.CTkLabel(buffer_size_frame, text=self._("Queue depth"), font=ctk.CTkFont(size=13)).pack(side="left")
 
         self.buffer_size_var = ctk.StringVar(value=str(self.buffer_maxsize))
 
@@ -404,12 +442,14 @@ class FJChatVoice:
         )
         self.buffer_down_btn.pack(side="bottom")
 
-        self.save_buffer_btn = ctk.CTkButton(buffer_size_frame, text="Apply", width=100, command=self.save_buffer_size)
+        self.save_buffer_btn = ctk.CTkButton(
+            buffer_size_frame, text=self._("Apply"), width=100, command=self.save_buffer_size
+        )
         self.save_buffer_btn.pack(side="left", padx=10)
 
         ctk.CTkLabel(
             buffer_size_frame,
-            text="(number of messages waiting to be spoken)",
+            text=self._("Queue note"),
             font=ctk.CTkFont(size=11),
             text_color="gray",
         ).pack(side="left", padx=5)
@@ -422,26 +462,28 @@ class FJChatVoice:
         # Main filters
         main_filters_frame = ctk.CTkFrame(right_frame, fg_color=BG_COLOR, bg_color=BG_COLOR)
         main_filters_frame.pack(pady=(PAD, PAD_L), padx=PAD, fill="x", side="top", anchor="n")
-        ctk.CTkLabel(main_filters_frame, text="Main filters", font=ctk.CTkFont(size=FONT_SZ_L), anchor="nw").pack(
-            expand=True, fill="x", anchor="n"
-        )
+        ctk.CTkLabel(
+            main_filters_frame, text=self._("Main filters"), font=ctk.CTkFont(size=FONT_SZ_L), anchor="nw"
+        ).pack(expand=True, fill="x", anchor="n")
         filters_grid = ctk.CTkFrame(main_filters_frame, fg_color=BG_COLOR, bg_color=BG_COLOR)
         filters_grid.pack(fill="x")
 
         # Minimum length
-        ctk.CTkLabel(filters_grid, text="Min message length:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        ctk.CTkLabel(filters_grid, text=self._("Min message length")).grid(row=0, column=0, padx=5, pady=5, sticky="w")
         self.min_length_var = ctk.StringVar(value=str(self.min_length))
         self.min_length_entry = ctk.CTkEntry(filters_grid, width=80, textvariable=self.min_length_var)
         self.min_length_entry.grid(row=0, column=1, padx=5, pady=5)
 
         # Maximum length
-        ctk.CTkLabel(filters_grid, text="Max message length:").grid(row=0, column=2, padx=(20, 5), pady=5, sticky="w")
+        ctk.CTkLabel(filters_grid, text=self._("Max message length")).grid(
+            row=0, column=2, padx=(20, 5), pady=5, sticky="w"
+        )
         self.max_length_var = ctk.StringVar(value=str(self.max_length))
         self.max_length_entry = ctk.CTkEntry(filters_grid, width=80, textvariable=self.max_length_var)
         self.max_length_entry.grid(row=0, column=3, padx=5, pady=5)
 
         # Delay
-        ctk.CTkLabel(filters_grid, text="Delay between messages (sec):").grid(
+        ctk.CTkLabel(filters_grid, text=self._("Delay between messages")).grid(
             row=1, column=0, padx=5, pady=5, sticky="w"
         )
         self.delay_var = ctk.StringVar(value=str(self.speak_delay))
@@ -450,32 +492,38 @@ class FJChatVoice:
 
         # Checkboxes
         self.filter_emojis_var = ctk.BooleanVar(value=self.filter_emojis)
-        self.filter_emojis_check = ctk.CTkCheckBox(filters_grid, text="Remove emojis", variable=self.filter_emojis_var)
+        self.filter_emojis_check = ctk.CTkCheckBox(
+            filters_grid, text=self._("Remove emojis"), variable=self.filter_emojis_var
+        )
         self.filter_emojis_check.grid(row=2, column=0, columnspan=2, padx=5, pady=5, sticky="w")
 
         self.filter_links_var = ctk.BooleanVar(value=self.filter_links)
-        self.filter_links_check = ctk.CTkCheckBox(filters_grid, text="Remove links", variable=self.filter_links_var)
+        self.filter_links_check = ctk.CTkCheckBox(
+            filters_grid, text=self._("Remove links"), variable=self.filter_links_var
+        )
         self.filter_links_check.grid(row=2, column=2, columnspan=2, padx=5, pady=5, sticky="w")
 
         self.filter_repeats_var = ctk.BooleanVar(value=self.filter_repeats)
         self.filter_repeats_check = ctk.CTkCheckBox(
-            filters_grid, text="Filter repeats (anti-spam)", variable=self.filter_repeats_var
+            filters_grid, text=self._("Filter repeats"), variable=self.filter_repeats_var
         )
         self.filter_repeats_check.grid(row=3, column=0, columnspan=2, padx=5, pady=5, sticky="w")
 
         self.read_names_var = ctk.BooleanVar(value=self.read_names)
-        self.read_names_check = ctk.CTkCheckBox(filters_grid, text="Read author names", variable=self.read_names_var)
+        self.read_names_check = ctk.CTkCheckBox(
+            filters_grid, text=self._("Read author names"), variable=self.read_names_var
+        )
         self.read_names_check.grid(row=3, column=2, columnspan=2, padx=5, pady=5, sticky="w")
 
         self.ignore_system_var = ctk.BooleanVar(value=self.ignore_system)
         self.ignore_system_check = ctk.CTkCheckBox(
-            filters_grid, text="Ignore system messages", variable=self.ignore_system_var
+            filters_grid, text=self._("Ignore system messages"), variable=self.ignore_system_var
         )
         self.ignore_system_check.grid(row=4, column=0, columnspan=2, padx=5, pady=5, sticky="w")
 
         self.subscribers_only_var = ctk.BooleanVar(value=self.subscribers_only)
         self.subscribers_only_check = ctk.CTkCheckBox(
-            filters_grid, text="Subscribers only", variable=self.subscribers_only_var
+            filters_grid, text=self._("Subscribers only"), variable=self.subscribers_only_var
         )
         self.subscribers_only_check.grid(row=4, column=2, columnspan=2, padx=5, pady=5, sticky="w")
 
@@ -484,16 +532,16 @@ class FJChatVoice:
         stop_words_frame = ctk.CTkFrame(right_frame, fg_color=BG_COLOR, bg_color=BG_COLOR)
         stop_words_frame.pack(fill="x")
 
-        ctk.CTkLabel(
-            stop_words_frame, text="Stop words (ignore messages)", font=ctk.CTkFont(size=FONT_SZ_L), anchor="nw"
-        ).pack(expand=True, fill="x", anchor="n")
+        ctk.CTkLabel(stop_words_frame, text=self._("Stop words"), font=ctk.CTkFont(size=FONT_SZ_L), anchor="nw").pack(
+            expand=True, fill="x", anchor="n"
+        )
 
         self.stop_words_text = ctk.CTkTextbox(stop_words_frame)
         self.stop_words_text.pack(fill="both")
         self.stop_words_text.insert("1.0", "\n".join(self.stop_words))
 
         save_stop_words_btn = ctk.CTkButton(
-            stop_words_frame, text="💾 Save stop words", width=200, command=self.save_stop_words
+            stop_words_frame, text=self._("Save stop words"), width=200, command=self.save_stop_words
         )
         save_stop_words_btn.pack(pady=10)
 
@@ -526,14 +574,50 @@ class FJChatVoice:
                 self.display_system_message(
                     "Found cached Silero model, loading... (this may take 1-2 minutes)", "system"
                 )
-                self.init_silero()
+                self.init_silero(self.chat_language)
             else:
                 self.display_system_message("Silero model not found in cache, click the load button", "system")
         except Exception as e:
             pass
 
-    def init_silero(self):
+    def change_gui_language(self, language):
+        """Change GUI language: set language and rebuild UI texts"""
+        if language not in TRANSLATIONS:
+            return
+        self.gui_language = language
+
+        # Update window title
+        try:
+            self.window.title(self._("app_title"))
+        except Exception:
+            pass
+
+        # Rebuild main UI to apply translations: destroy current widgets and recreate
+        try:
+            for child in list(self.window.winfo_children()):
+                child.destroy()
+        except Exception:
+            pass
+
+        # Recreate UI
+        self.setup_ui()
+        self.init_silero(self.chat_language)
+
+        # Update stats text
+        try:
+            self.update_stats()
+        except Exception:
+            pass
+        # Save language preference
+        try:
+            self.save_settings()
+        except Exception:
+            pass
+
+    def init_silero(self, language):
         """Initialize Silero TTS model"""
+
+        self.chat_language = language
 
         def init_thread():
             with self.model_lock:
@@ -541,7 +625,7 @@ class FJChatVoice:
                     self.window.after(
                         0,
                         lambda: self.tts_status_label.configure(
-                            text="🔄 Loading Silero model (this may take 1-2 minutes)..."
+                            text="Loading Silero model (this may take 1-2 minutes)...", text_color="gray"
                         ),
                     )
 
@@ -551,18 +635,32 @@ class FJChatVoice:
                     # Clear memory before loading
                     gc.collect()
 
-                    # Load model
-                    self.silero_model, example_text = torch.hub.load(
-                        repo_or_dir="snakers4/silero-models",
-                        model="silero_tts",
-                        language="ru",
-                        speaker="v5_ru",
-                        trust_repo=True,
-                    )
-
                     torch.set_grad_enabled(False)
 
-                    self.speak_silero("Warmup")
+                    self.voice_options.configure(values=VOICES[language])
+                    self.speaker = VOICES[language][0]
+                    self.voice_var.set(self.speaker)
+
+                    # Load model
+                    if language == "Russian":
+                        self.silero_model, example_text = torch.hub.load(
+                            repo_or_dir="snakers4/silero-models",
+                            model="silero_tts",
+                            language="ru",
+                            speaker="v5_ru",
+                            trust_repo=True,
+                        )
+                        self.speak_silero("Прогрев")
+
+                    else:
+                        self.silero_model, example_text = torch.hub.load(
+                            repo_or_dir="snakers4/silero-models",
+                            model="silero_tts",
+                            language="en",
+                            speaker="v3_en",
+                            trust_repo=True,
+                        )
+                        self.speak_silero("Warmup")
 
                     self.silero_available = True
                     self.is_tts_ready = True
@@ -997,7 +1095,7 @@ class FJChatVoice:
         time_str = datetime.now().strftime("%H:%M:%S")
 
         self.chat_text.configure(state="normal")
-        self.chat_text.insert("end", f"[{time_str}] [System] {message}\n", tag)
+        self.chat_text.insert("end", f"[{time_str}] [{self._('System')}] {message}\n", tag)
         self.chat_text.configure(state="disabled")
 
         if self.auto_scroll_var.get():
@@ -1007,7 +1105,7 @@ class FJChatVoice:
         """Update statistics"""
         queue_size = len(self.message_buffer) if self.message_buffer else 0
         self.stats_label.configure(
-            text=f"📊 Messages: {self.messages_count} | Spoken: {self.spoken_count} | Spam: {self.spam_count} | In queue: {queue_size}"
+            text=f"{self._('Messages')}: {self.messages_count} | {self._('Spoken')}: {self.spoken_count} | {self._('Spam')}: {self.spam_count} | {self._('In queue')}: {queue_size}"
         )
 
     def reset_stats(self):
@@ -1179,7 +1277,7 @@ class FJChatVoice:
 
             self.display_system_message("Disconnected from chat")
 
-    def save_yt_api_key(self):
+    def save_api_key_yt(self):
         """Save API key"""
         self.api_key_yt = self.api_entry_yt.get()
         self.save_settings()
@@ -1188,8 +1286,10 @@ class FJChatVoice:
     def save_settings(self):
         """Save settings to file"""
         settings = {
-            "api_key": self.api_key_yt,
-            "video_id": self.video_id_yt,
+            "gui_language": self.gui_language,
+            "api_key_yt": self.api_key_yt,
+            # "video_id": self.video_id_yt,
+            "chat_language": self.chat_language,
             "silero_speaker": self.speaker,
             "speech_rate": self.speech_rate,
             "volume": self.volume,
@@ -1234,9 +1334,11 @@ class FJChatVoice:
         try:
             with open("settings.json", "r", encoding="utf-8") as f:
                 settings = json.load(f)
-                self.api_key_yt = settings.get("api_key", "")
-                self.video_id_yt = settings.get("video_id", "")
-                self.speaker = settings.get("silero_speaker", "xenia")
+                self.gui_language = settings.get("gui_language", DEFAULT_LANGUAGE)
+                self.api_key_yt = settings.get("api_key_yt", "")
+                # self.video_id_yt = settings.get("video_id", "")
+                self.chat_language = settings.get("chat_language", DEFAULT_LANGUAGE)
+                self.speaker = settings.get("silero_speaker", VOICES[self.chat_language][0])
                 self.speech_rate = settings.get("speech_rate", 1.0)
                 self.volume = settings.get("volume", 1.0)
                 self.put_accent = settings.get("put_accent", True)
@@ -1307,6 +1409,97 @@ class FJChatVoice:
         self.window.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.window.mainloop()
 
+
+TRANSLATIONS = {
+    "English": {
+        "app_title": "FJ Chat Voice - Silero TTS",
+        "tab_chat": "📺 Chat",
+        "tab_settings": "⚙️ Settings",
+        "Messages": "Messages",
+        "Spoken": "Spoken",
+        "Spam": "Spam",
+        "In queue": "In queue",
+        "Volume": "Volume:",
+        "Speech rate": "Speech rate:",
+        "YouTube URL / ID": "YouTube URL / ID",
+        "Connect": "Connect",
+        "Clear log": "Clear log",
+        "Export log": "Export log",
+        "Message Log": "💬 Message Log",
+        "Auto-scroll": "Auto-scroll",
+        "Language": "Language",
+        "Credentials": "Credentials",
+        "Google API Key": "Google API Key",
+        "Another credentials": "Another credentials",
+        "Silero model": "Silero model",
+        "Silero not loaded": "⚪ Silero not loaded",
+        "Chat language": "Chat language",
+        "Voice": "Voice",
+        "Add accents": "Add accents",
+        "Replace e with yo (Russian)": "Replace e with yo (Russian)",
+        "Message Queue": "Message Queue",
+        "Queue depth": "Queue depth:",
+        "Queue note": "(number of messages waiting to be spoken)",
+        "Main filters": "Main filters",
+        "Min message length": "Min message length:",
+        "Max message length": "Max message length:",
+        "Delay between messages": "Delay between messages (sec):",
+        "Remove emojis": "Remove emojis",
+        "Remove links": "Remove links",
+        "Filter repeats": "Filter repeats (anti-spam)",
+        "Read author names": "Read author names",
+        "Ignore system messages": "Ignore system messages",
+        "Subscribers only": "Subscribers only",
+        "Stop words": "Stop words (ignore messages)",
+        "Save stop words": "Save stop words",
+        "Apply": "Apply",
+        "System": "System",
+    },
+    "Russian": {
+        "app_title": "FJ Chat Voice - Silero TTS",
+        "tab_chat": "📺 Чат",
+        "tab_settings": "⚙️ Настройки",
+        "Messages": "Сообщения",
+        "Spoken": "Озвучено",
+        "Spam": "Спам",
+        "In queue": "В очереди",
+        "Volume": "Громкость:",
+        "Speech rate": "Скорость озвучки:",
+        "YouTube URL / ID": "YouTube URL / ID",
+        "Connect": "Подключиться",
+        "Clear log": "Очистить лог",
+        "Export log": "Экспорт лога",
+        "Message Log": "💬 Журнал сообщений",
+        "Auto-scroll": "Автопрокрутка",
+        "Language": "Язык",
+        "Credentials": "Учётные данные",
+        "Google API Key": "Ключ Google API",
+        "Another credentials": "Другие данные",
+        "Silero model": "Модель Silero",
+        "Silero not loaded": "⚪ Silero не загружена",
+        "Chat language": "Язык чата",
+        "Voice": "Голос",
+        "Add accents": "Добавлять акценты",
+        "Replace e with yo (Russian)": "Заменять е на ё (русск.)",
+        "Message Queue": "Очередь сообщений",
+        "Queue depth": "Глубина очереди:",
+        "Queue note": "(количество сообщений в очереди)",
+        "Main filters": "Основные фильтры",
+        "Min message length": "Мин. длина сообщ.:",
+        "Max message length": "Макс. длина сообщ.:",
+        "Delay between messages": "Задержка между сообщ. (сек):",
+        "Remove emojis": "Удалять эмодзи",
+        "Remove links": "Удалять ссылки",
+        "Filter repeats": "Фильтр повторов (анти-спам)",
+        "Read author names": "Читать имена авторов",
+        "Ignore system messages": "Игнорировать системные сообщения",
+        "Subscribers only": "Только подписчики",
+        "Stop words": "Стоп-слова (игнорировать)",
+        "Save stop words": "Сохранить стоп-слова",
+        "Apply": "Применить",
+        "System": "Система",
+    },
+}
 
 if __name__ == "__main__":
     app = FJChatVoice()
