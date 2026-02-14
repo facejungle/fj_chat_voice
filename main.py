@@ -82,6 +82,10 @@ class FJChatVoice:
         self.last_message_time = {}
         self.message_hash_set = set()
 
+        # API backoff (reduce quota usage on errors / long polling)
+        self.api_backoff = 1
+        self.api_backoff_max = 60
+
         # Message queue
         self.message_buffer = None
         self.last_speak_time = 0
@@ -848,14 +852,25 @@ class FJChatVoice:
 
         while self.is_running_yt:
             if self.is_speaking or not self.audio_queue.empty():
-                time.sleep(0.5)
+                time.sleep(1)
                 continue
             try:
                 self.is_fetching = True
 
+                # Request only necessary fields to minimise payload
+                fields = (
+                    "nextPageToken,pollingIntervalMillis,"
+                    "items(id,snippet(displayMessage),authorDetails(displayName,isChatOwner,isChatSponsor,isChatModerator))"
+                )
+
                 response = (
                     self.youtube.liveChatMessages()
-                    .list(liveChatId=self.chat_id, part="snippet,authorDetails", pageToken=next_token)
+                    .list(
+                        liveChatId=self.chat_id,
+                        part="snippet,authorDetails",
+                        pageToken=next_token,
+                        fields=fields,
+                    )
                     .execute()
                 )
 
@@ -874,7 +889,7 @@ class FJChatVoice:
                         snippet = item["snippet"]
                         author_details = item.get("authorDetails", {})
 
-                        author = snippet.get("authorDisplayName", "Anonymous")
+                        author = author_details.get("displayName", snippet.get("authorDisplayName", "Anonymous"))
                         if not author or author.strip() == "":
                             author = "Anonymous"
 
@@ -921,10 +936,18 @@ class FJChatVoice:
                                 self.message_buffer.append((author, cleaned))
 
                 self.window.after(0, self.update_stats)
+                # reset backoff on success
+                self.api_backoff = 1
                 self.is_fetching = False
 
-                time.sleep(5)
+                # respect polling interval returned by API when available
+                poll_ms = response.get("pollingIntervalMillis")
+                try:
+                    sleep_seconds = max(1, int(poll_ms) / 1000) if poll_ms is not None else 5
+                except Exception:
+                    sleep_seconds = 5
 
+                time.sleep(sleep_seconds)
                 if len(self.processed_messages) > 1000:
                     self.processed_messages = set(list(self.processed_messages)[-500:])
 
