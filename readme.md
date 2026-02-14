@@ -1,5 +1,27 @@
 # FJ Chat Voice - Text to Speech
 
+This is a program for real-time chat voiceover using the Silero model.
+
+It uses the Google API to retrieve messages from YouTube chat and converts them to speech. The key acquisition method is described in the instructions.
+The first launch may take 1-2 minutes, as the program downloads the model and caches it for subsequent launches.
+
+- The program is completely free.
+- The program interface is Russian and English, and it also supports voiceover in Russian and English.
+- Currently, the program only supports YouTube, but I plan to add support for Twitch and other platforms in the future.
+
+Implemented features:
+
+- Voice selection
+- Spam filter and stopword list
+- Adjustable voiceover volume
+- Adjustable voiceover speed
+- Adjustable number of messages in the queue
+- Speak numbers in messages
+
+Limitations:
+
+- The Google API has a limit on the number of requests per day, typically 10,000. View your quota: [Google Console: Quotas](https://console.cloud.google.com/iam-admin/quotas)
+
 ![alt text](./docs/app_0.png)
 ![alt text](./docs/app_1.png)
 
