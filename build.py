@@ -15,7 +15,7 @@ import locale
 
 APP_NAME = "FJ_Chat_Voice"
 MAIN_SCRIPT = "main.py"
-VERSION = "1.0.3"
+VERSION = "1.0.4"
 FILE_NAME = f"{APP_NAME}_{VERSION}"
 
 TORCH_CACHE_DIR = Path.home() / ".cache" / "torch" / "hub"
