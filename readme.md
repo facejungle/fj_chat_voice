@@ -52,8 +52,8 @@ Google Console > APIs & Services > Credentials > Create credentials > API key
 git clone https://github.com/facejungle/fj_chat_voice.git
 cd fj_chat_voice
 
-pip install -r requirements.txt
 pip install -r torch.requirements.txt
+pip install -r requirements.txt
 
 python main.py
 ```
@@ -61,7 +61,6 @@ python main.py
 ## Build
 
 ```
-pip install pyinstaller pyinstaller-versionfile
 python build.py
 ```
 
