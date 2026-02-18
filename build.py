@@ -78,7 +78,7 @@ EXCLUDES = []
 
 def create_virtual_env():
     """Create virtual environment for building"""
-    venv_path = ".venv2"
+    venv_path = ".venv"
     venv_path = os.path.abspath(venv_path)
 
     if not os.path.exists(venv_path):
@@ -165,7 +165,7 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=True,
+    console=platform.system() == "Windows",
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
