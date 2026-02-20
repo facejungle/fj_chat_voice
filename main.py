@@ -1,4 +1,4 @@
-import os
+﻿import os
 import sys
 from collections import defaultdict, deque
 import asyncio
@@ -87,6 +87,55 @@ twitch_default_credentials = TwitchCredentialsTD(
 )
 
 
+def configure_torch_hub_cache():
+    """Use a stable user cache path only for frozen builds."""
+    if not getattr(sys, "frozen", False):
+        return
+
+    home_dir = os.path.expanduser("~")
+    cache_root = os.path.join(home_dir, ".cache")
+    torch_home = os.path.join(cache_root, "torch")
+    torch_hub_dir = os.path.join(torch_home, "hub")
+
+    os.environ.setdefault("XDG_CACHE_HOME", cache_root)
+    os.environ.setdefault("TORCH_HOME", torch_home)
+    os.makedirs(torch_hub_dir, exist_ok=True)
+    hub.set_dir(torch_hub_dir)
+
+
+def find_cached_silero_repo():
+    hub_dir = hub.get_dir()
+    if not os.path.isdir(hub_dir):
+        return None
+
+    repo_candidates = []
+    prefix = "snakers4_silero-models_"
+    for entry in os.listdir(hub_dir):
+        if entry.startswith(prefix):
+            repo_path = os.path.join(hub_dir, entry)
+            if os.path.isdir(repo_path):
+                repo_candidates.append(repo_path)
+
+    if not repo_candidates:
+        return None
+    return max(repo_candidates, key=os.path.getmtime)
+
+
+def prefer_cached_silero_package(repo_path):
+    """Force hubconf import to resolve silero package from cached torch hub repo."""
+    if not repo_path:
+        return
+
+    src_dir = os.path.join(repo_path, "src")
+    if os.path.isdir(src_dir) and src_dir not in sys.path:
+        sys.path.insert(0, src_dir)
+
+    # Drop bundled silero modules from PyInstaller temp path to avoid redownload on each launch.
+    for module_name in list(sys.modules.keys()):
+        if module_name == "silero" or module_name.startswith("silero."):
+            del sys.modules[module_name]
+
+
 def _proc_translate_external(q, txt, dst):
     """Module-level worker for multiprocessing spawn on Windows."""
     try:
@@ -163,6 +212,7 @@ class MainWindow(QMainWindow):
         self.translator = Translator()
         self.translator_lock = threading.Lock()
 
+        configure_torch_hub_cache()
         set_num_threads(2)
         set_grad_enabled(False)
 
@@ -1269,13 +1319,38 @@ class MainWindow(QMainWindow):
         self.add_sys_message(author="Silero", text=_(self.language, "silero_loading"))
         try:
             with self.model_lock:
-                self.model, txt = hub.load(
-                    repo_or_dir="snakers4/silero-models",
-                    model="silero_tts",
-                    language=self.voice_language,
-                    speaker=MODELS[self.voice_language],
-                    trust_repo=True,
-                )
+                if getattr(sys, "frozen", False):
+                    cached_repo = find_cached_silero_repo()
+                    if cached_repo:
+                        prefer_cached_silero_package(cached_repo)
+                        self.model, txt = hub.load(
+                            repo_or_dir=cached_repo,
+                            source="local",
+                            model="silero_tts",
+                            language=self.voice_language,
+                            speaker=MODELS[self.voice_language],
+                            trust_repo=True,
+                            force_reload=False,
+                        )
+                    else:
+                        self.model, txt = hub.load(
+                            repo_or_dir="snakers4/silero-models",
+                            source="github",
+                            model="silero_tts",
+                            language=self.voice_language,
+                            speaker=MODELS[self.voice_language],
+                            trust_repo=True,
+                            force_reload=False,
+                        )
+                else:
+                    self.model, txt = hub.load(
+                        repo_or_dir="snakers4/silero-models",
+                        model="silero_tts",
+                        language=self.voice_language,
+                        speaker=MODELS[self.voice_language],
+                        trust_repo=True,
+                        force_reload=False,
+                    )
 
             self.add_sys_message(
                 author="Silero",
@@ -1291,14 +1366,14 @@ class MainWindow(QMainWindow):
                 status="error",
             )
             return False
-        # finally:
-        #     try:
-        #         silero_catalog_path = os.path.join(
-        #             os.getcwd(), "latest_silero_models.yml"
-        #         )
-        #         os.remove(silero_catalog_path)
-        #     except OSError:
-        #         pass
+        finally:
+            try:
+                silero_catalog_path = os.path.join(
+                    os.getcwd(), "latest_silero_models.yml"
+                )
+                os.remove(silero_catalog_path)
+            except OSError:
+                pass
 
     def clean_message(self, text):
         """Clean message from garbage"""
