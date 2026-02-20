@@ -254,9 +254,6 @@ def build():
             os.chmod(exe_path, os.stat(exe_path).st_mode | stat.S_IEXEC)
 
         if os.path.exists(exe_path):
-            if os.path.exists(ICON_PATH):
-                shutil.copytree("img", "dist/img")
-
             size_mb = os.path.getsize(exe_path) / (1024 * 1024)
             print(f"   Size: {size_mb:.2f} MB")
 

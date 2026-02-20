@@ -87,6 +87,12 @@ twitch_default_credentials = TwitchCredentialsTD(
 )
 
 
+def resource_path(relative_path: str) -> str:
+    """Resolve resource paths for source and PyInstaller onefile builds."""
+    base_path = getattr(sys, "_MEIPASS", os.path.abspath("."))
+    return os.path.join(base_path, relative_path)
+
+
 def configure_torch_hub_cache():
     """Use a stable user cache path only for frozen builds."""
     if not getattr(sys, "frozen", False):
@@ -154,7 +160,7 @@ def _proc_translate_external(q, txt, dst):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        icon = QIcon("img/icon.png")
+        icon = QIcon(resource_path("img/icon.png"))
         self.setWindowIcon(icon)
         self.setWindowTitle(APP_NAME)
         self.setMinimumSize(1200, 600)
