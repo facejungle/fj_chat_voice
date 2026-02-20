@@ -47,48 +47,18 @@ from scipy.signal import resample
 import numpy as np
 from googletrans import Translator
 
-from src.translations import DEFAULT_LANGUAGE, TRANSLATIONS, _
-from src.twitch.auth_worker import AuthWorker
-from src.twitch.chat_listener import TwitchChatListener
-from src.youtube.chat_listener import YouTubeChatListener
-
-APP_NAME = "FJ Chat to Speech"
-PADDING = 20
-DEFAULT_BUFFER_SIZE = 5
-VOICES = {
-    "ru": ("xenia", "aidar", "baya", "kseniya", "eugene"),
-    "en": (
-        "random",
-        "en_0",
-        "en_1",
-        "en_2",
-        "en_3",
-        "en_4",
-        "en_5",
-        "en_6",
-        "en_7",
-        "en_8",
-        "en_9",
-        "en_10",
-        "en_11",
-        "en_12",
-        "en_13",
-        "en_14",
-        "en_15",
-        "en_16",
-        "en_17",
-        "en_18",
-        "en_19",
-        "en_20",
-    ),
-}
-
-MODELS = {
-    "ru": "v5_1_ru",
-    "en": "v3_en",
-}
-
-APP_VERSION = "1.0.6"
+from app.translations import DEFAULT_LANGUAGE, TRANSLATIONS, _
+from app.twitch.auth_worker import AuthWorker
+from app.twitch.chat_listener import TwitchChatListener
+from app.youtube.chat_listener import YouTubeChatListener
+from app.constants import (
+    APP_VERSION,
+    APP_NAME,
+    PADDING,
+    DEFAULT_BUFFER_SIZE,
+    VOICES,
+    MODELS,
+)
 
 size_policy_fixed = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 window_flag_fixed = (
@@ -1283,6 +1253,9 @@ class MainWindow(QMainWindow):
                 self.twitch_credentials = settings.get(
                     "twitch_credentials", twitch_default_credentials
                 )
+                if not isinstance(self.twitch_credentials, dict):
+                    self.twitch_credentials = twitch_default_credentials
+
                 self.stop_words = tuple(settings.get("stop_words", []))
         except FileNotFoundError:
             pass  # No settings file, use defaults
@@ -1318,14 +1291,14 @@ class MainWindow(QMainWindow):
                 status="error",
             )
             return False
-        finally:
-            try:
-                silero_catalog_path = os.path.join(
-                    os.getcwd(), "latest_silero_models.yml"
-                )
-                os.remove(silero_catalog_path)
-            except OSError:
-                pass
+        # finally:
+        #     try:
+        #         silero_catalog_path = os.path.join(
+        #             os.getcwd(), "latest_silero_models.yml"
+        #         )
+        #         os.remove(silero_catalog_path)
+        #     except OSError:
+        #         pass
 
     def clean_message(self, text):
         """Clean message from garbage"""

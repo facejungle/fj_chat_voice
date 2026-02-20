@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 
 import requests
 
-from src.translations import _
+from app.translations import _
 
 
 class TwitchChatListener:

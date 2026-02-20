@@ -12,14 +12,13 @@ import platform
 from pathlib import Path
 import stat
 
-from main import APP_VERSION, APP_NAME
+from app.constants import APP_VERSION, APP_NAME
 
-# APP_NAME = "FJ Chat to Speech"
-# APP_VERSION = "1.0.6"
 MAIN_SCRIPT = "main.py"
+PLATFORM = platform.system()
 FILE_NAME = (
     f"fj_chat_to_speech_{APP_VERSION}_windows"
-    if platform.system() == "Windows"
+    if PLATFORM == "Windows"
     else f"fj_chat_to_speech_{APP_VERSION}_linux"
 )
 
@@ -30,7 +29,7 @@ ICON_PATH_MAC = "img/icon.icns"
 
 def ensure_windows_icon():
     """Convert PNG to ICO if needed"""
-    if platform.system() == "Windows" and not os.path.exists(ICON_PATH_WINDOWS):
+    if PLATFORM == "Windows" and not os.path.exists(ICON_PATH_WINDOWS):
         if os.path.exists(ICON_PATH):
             try:
                 from PIL import Image
@@ -86,6 +85,7 @@ HIDDEN_IMPORTS = [
     "googletrans",
     "PIL",
     "PIL.Image",
+    "omegaconf",
     "silero",
     "silero.utils",
 ]
@@ -109,7 +109,7 @@ def create_virtual_env():
     else:
         print(f"✓ Using existing virtual environment at {venv_path}")
 
-    if platform.system() == "Windows":
+    if PLATFORM == "Windows":
         pip_path = os.path.join(venv_path, "Scripts", "pip.exe")
         python_path = os.path.join(venv_path, "Scripts", "python.exe")
     else:
@@ -141,7 +141,7 @@ def create_spec_file():
     if os.path.exists(icon_path):
         icon_data = [(icon_path, "img")]
 
-        if platform.system() == "Windows" and os.path.exists(ICON_PATH_WINDOWS):
+        if PLATFORM == "Windows" and os.path.exists(ICON_PATH_WINDOWS):
             icon_data.append((ICON_PATH_WINDOWS, "img"))
             icon_path = ICON_PATH_WINDOWS
 
@@ -218,15 +218,15 @@ def install_dependencies():
 def build():
     """Build with UPX compression"""
     print("\n" + "=" * 50)
-    print(f"Building for {platform.system()}")
+    print(f"Building for {PLATFORM}")
     print("=" * 50)
 
     venv_path, pip_path, python_path = install_dependencies()
 
-    if platform.system() == "Windows":
+    if PLATFORM == "Windows":
         ensure_windows_icon()
 
-    if platform.system() == "Windows":
+    if PLATFORM == "Windows":
         pyinstaller_path = os.path.join(venv_path, "Scripts", "pyinstaller.exe")
     else:
         pyinstaller_path = os.path.join(venv_path, "bin", "pyinstaller")
@@ -236,7 +236,7 @@ def build():
 
     spec_file = create_spec_file()
 
-    # if platform.system() == "Windows":
+    # if PLATFORM == "Windows":
     #     create_windows_manifest()
 
     cmd = [pyinstaller_path, "--clean", "--noconfirm", spec_file]
@@ -246,7 +246,7 @@ def build():
 
         print(f"\n✅ Executable built: dist/")
 
-        if platform.system() == "Windows":
+        if PLATFORM == "Windows":
             exe_path = f"dist/{FILE_NAME}.exe"
         else:
             exe_path = f"dist/{FILE_NAME}"
@@ -362,7 +362,7 @@ def main():
         print(f"   Files are located in the 'dist/' directory")
 
         # Show final size
-        if platform.system() == "Windows":
+        if PLATFORM == "Windows":
             exe_path = f"dist/{FILE_NAME}.exe"
         else:
             exe_path = f"dist/{FILE_NAME}"

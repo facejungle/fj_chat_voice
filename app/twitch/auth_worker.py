@@ -4,7 +4,7 @@ import time
 
 from PyQt6.QtCore import QThread, pyqtSignal
 
-from src.translations import _
+from app.translations import _
 
 
 class AuthWorker(QThread):

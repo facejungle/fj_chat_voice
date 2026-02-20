@@ -3,7 +3,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 import urllib
 
-from src.translations import _
+from app.translations import _
 
 YT_API_FIELDS = (
     "nextPageToken,pollingIntervalMillis,"
