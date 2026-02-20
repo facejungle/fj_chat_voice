@@ -524,12 +524,13 @@ class MainWindow(QMainWindow):
         self.clr_queue_button.setText((_(self.language, "Clear queue")))
 
     def voice_changed(self, lang, voice):
+        if self.voice_language != lang:
+            threading.Thread(target=self.init_silero, daemon=True).start()
         self.voice_language = lang
         self.voice = voice
         self.save_settings()
         self.setup_voice_menu()
         self.voice_label.setText(self.status_voice_text())
-        threading.Thread(target=self.init_silero, daemon=True).start()
 
     def speech_rate_changed(self, value):
         self.speech_rate = value / 100.0  # Convert to 0.50 - 1.50 range
