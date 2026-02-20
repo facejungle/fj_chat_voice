@@ -1,4 +1,6 @@
-# FJ Chat Voice - Text to Speech
+# FJ Chat to Speech
+
+<img alt="FJ Chat to Speech" src="./docs/app_0.png" width="700">
 
 This is a program for real-time chat voiceover using the Silero model.
 
@@ -7,7 +9,6 @@ The first launch may take 1-2 minutes, as the program downloads the model and ca
 
 - The program is completely free.
 - The program interface is Russian and English, and it also supports voiceover in Russian and English.
-- Currently, the program only supports YouTube, but I plan to add support for Twitch and other platforms in the future.
 
 Implemented features:
 
@@ -19,32 +20,14 @@ Implemented features:
 - Speak numbers in messages
 - Translation of chat messages into speech language
 
-Limitations:
-
-- The Google API has a limit on the number of requests per day, typically quota equal 10,000. View your quota: [Google Console: Quotas](https://console.cloud.google.com/iam-admin/quotas)
-
-![alt text](./docs/app_0.png)
-
 ## Text-to-speech for YouTube streams
 
-### Google API Key
+- Generating [Google API Keys](https://github.com/facejungle/fj_chat_voice/wiki/Google-API-Keys)
+- The Google API has a limit on the number of requests per day, typically quota equal 10,000. View your quota: [Google Console: Quotas](https://console.cloud.google.com/iam-admin/quotas)
 
-#### 1. Create new project
+## Text-to-speech for Twitch streams
 
-Go to Google Console: https://console.cloud.google.com/
-![alt text](./docs/console_project_0.png)
-![alt text](./docs/console_project_1.png)
-
-#### 2. Enable YouTube Data API v3
-
-https://console.cloud.google.com/apis/api/youtube.googleapis.com/
-
-#### 3. Create API Key
-
-Google Console > APIs & Services > Credentials > Create credentials > API key
-![alt text](./docs/console_api_key_0.png)
-![alt text](./docs/console_api_key_1.png)
-![alt text](./docs/console_api_key_2.png)
+- Generating [Twitch CLIENT ID](https://github.com/facejungle/fj_chat_voice/wiki/Twitch-CLIENT-ID)
 
 ## Launch from source code
 
@@ -64,4 +47,4 @@ python main.py
 python build.py
 ```
 
-## Thanks for [Silero](https://github.com/snakers4/silero-models/) :)
+## Thanks for <a href="https://github.com/snakers4/silero-models/" target="_blank">Silero</a> :)
