@@ -38,7 +38,7 @@ class YouTubeChatListener:
     def run(self):
         self.is_connected = self._connect()
         errors = 0
-        delay = 3
+        delay = 5
         page_token = None
 
         try:
@@ -50,7 +50,7 @@ class YouTubeChatListener:
                     errors = 0
 
                 if errors >= 5:
-                    self.disconnect(_(self.lang, "many_errors"))
+                    self.disconnect()
                     return
 
                 sleep(delay * max(1, errors))
@@ -59,7 +59,7 @@ class YouTubeChatListener:
             self.on_error(f"{_(self.lang, "chat_listener_error")}. {str(e)}")
 
         finally:
-            self.disconnect(_(self.lang, "chat_listener_stopped"))
+            self.disconnect()
 
     def disconnect(self):
         if self.is_connected:
@@ -153,8 +153,9 @@ class YouTubeChatListener:
     def _parse_video_id(self):
         try:
             video_id = self.url
-
-            if "youtube.com" in self.url or "youtu.be" in self.url:
+            if self.url.startswith("watch?v="):
+                self.url = self.url.removeprefix("watch?v=")
+            elif "youtube.com" in self.url or "youtu.be" in self.url:
                 parsed = urllib.parse.urlparse(self.url)
                 if "youtu.be" in parsed.netloc:
                     video_id = parsed.path[1:]
