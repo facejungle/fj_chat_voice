@@ -194,6 +194,11 @@ TRANSLATIONS = {
         "Translate messages": "Перевод сообщений",
         "Edit": "Редактировать",
         "Save": "Сохранить",
+        "Read platform name": "Озвучивать название платформы",
+        "youtube": "Ютуб",
+        "twitch": "Твич",
+        "Message from": "Сообщение из",
+        "random": "случайно",
     },
 }
 
