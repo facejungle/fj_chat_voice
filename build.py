@@ -73,7 +73,7 @@ HIDDEN_IMPORTS = [
     "time",
     "typing",
     "hashlib",
-    "googleapiclient",
+    # "googleapiclient",
     "num2words",
     "torch",
     "sounddevice",
