@@ -17,6 +17,7 @@ from typing import TypedDict
 import hashlib
 import colorsys
 
+from detoxify import Detoxify
 from num2words import num2words
 import sounddevice as sd
 from torch import hub, no_grad, set_grad_enabled, set_num_threads
@@ -169,6 +170,33 @@ def prefer_cached_silero_package(repo_path):
             del sys.modules[module_name]
 
 
+def find_cached_detoxify_checkpoint(model_type="multilingual"):
+    hub_dir = hub.get_dir()
+    checkpoints_dir = os.path.join(hub_dir, "checkpoints")
+    if not os.path.isdir(checkpoints_dir):
+        return None
+
+    model_markers = {
+        "original": "toxic_original",
+        "unbiased": "toxic_debiased",
+        "multilingual": "multilingual_debiased",
+        "original-small": "original-albert",
+        "unbiased-small": "unbiased-albert",
+    }
+    marker = model_markers.get(model_type, model_type)
+
+    checkpoint_candidates = []
+    for entry in os.listdir(checkpoints_dir):
+        if entry.endswith(".ckpt") and marker in entry:
+            checkpoint_path = os.path.join(checkpoints_dir, entry)
+            if os.path.isfile(checkpoint_path):
+                checkpoint_candidates.append(checkpoint_path)
+
+    if not checkpoint_candidates:
+        return None
+    return max(checkpoint_candidates, key=os.path.getmtime)
+
+
 def _proc_translate_external(q, txt, dst):
     """Module-level worker for multiprocessing spawn on Windows."""
     try:
@@ -185,7 +213,6 @@ def _proc_translate_external(q, txt, dst):
 
 
 class MainWindow(QMainWindow):
-
     def __init__(self):
         super().__init__()
         icon = QIcon(resource_path("img/icon.png"))
@@ -206,6 +233,7 @@ class MainWindow(QMainWindow):
         self.is_paused = False
         self.min_msg_length = 5
         self.max_msg_length = 200
+        self.toxic_sense = 0.25
 
         self.auto_scroll = True
         self.add_accents = True
@@ -214,7 +242,7 @@ class MainWindow(QMainWindow):
         self.read_platform_names = False
         self.subscribers_only = False
         self.auto_translate = False
-        self.stop_words = []
+        self.stop_words = tuple()
         self.chat_only_mode = False
 
         # Connections
@@ -242,6 +270,7 @@ class MainWindow(QMainWindow):
 
         self.setup_ui()
 
+        self.detox_model = None
         self.model = None
         self.model_lock = threading.Lock()
         self.translator = Translator()
@@ -252,6 +281,8 @@ class MainWindow(QMainWindow):
         set_grad_enabled(False)
 
         threading.Thread(target=self.init_silero, daemon=True).start()
+        if self.toxic_sense < 1.0:
+            threading.Thread(target=self.init_detoxify, daemon=True).start()
         threading.Thread(target=self.process_audio_loop, daemon=True).start()
         threading.Thread(target=self.process_msg_buffer_loop, daemon=True).start()
 
@@ -266,7 +297,9 @@ class MainWindow(QMainWindow):
             for voice in voices:
                 voice_action = QAction(voice, self)
                 voice_action.setCheckable(True)
-                voice_action.setChecked(voice == self.voice and voice_lang == self.voice_language)
+                voice_action.setChecked(
+                    voice == self.voice and voice_lang == self.voice_language
+                )
                 voice_action.triggered.connect(
                     lambda checked, l=voice_lang, v=voice: self.voice_changed(l, v)
                 )
@@ -634,6 +667,7 @@ class MainWindow(QMainWindow):
         if self.voice_language != lang:
             self.voice_language = lang
             threading.Thread(target=self.init_silero, daemon=True).start()
+            self.stop_words = self.load_stop_words(self.voice_language)
 
         self.save_settings()
         self.setup_voice_menu()
@@ -1029,8 +1063,17 @@ class MainWindow(QMainWindow):
 
     def on_save_stop_words(self):
         content = self.stop_words_text.toPlainText().strip()
-        self.stop_words = tuple([w.strip() for w in content.splitlines() if w.strip()])
-        self.save_settings()
+        self.stop_words = sorted(
+            tuple(set([w.strip() for w in content.splitlines() if w.strip()]))
+        )
+
+        with open(
+            resource_path(f"spam_filter/{self.voice_language}.txt"),
+            "w",
+            encoding="utf-8",
+        ) as f:
+            f.write("\n".join(self.stop_words) + "\n")
+
         self.statusBar().showMessage(
             f"{_(self.language, "Saved")} {len(self.stop_words)} {_(self.language, "stop words")}",
             3000,
@@ -1054,6 +1097,10 @@ class MainWindow(QMainWindow):
         self.google_api_key_button.clicked.connect(self.on_click_yt_edit_credential)
         self.google_api_key_button.setText(_(self.language, "Edit"))
 
+    def on_change_toxic_sense(self, value):
+        self.toxic_sense = value / 100.0
+        self.toxic_sense_label_value.setText(f"{self.toxic_sense:.2f}")
+        
     def on_delays_settings_action(self):
         dlg = QDialog(self)
         dlg.setFixedSize(600, 300)
@@ -1065,6 +1112,28 @@ class MainWindow(QMainWindow):
         root_widget.setMinimumSize(600, 300)
         root_widget.setContentsMargins(PADDING, PADDING, PADDING, PADDING)
         root_layout = QVBoxLayout(root_widget)
+
+        # Toxicity threshold
+
+        toxic_sense_v_layout = QVBoxLayout()
+        toxic_sense_v_layout.setContentsMargins(0, 0, 0, PADDING)
+        root_layout.addLayout(toxic_sense_v_layout)
+
+        self.toxic_sense_label_desc = QLabel(_(self.language, "Toxicity threshold (1 = OFF)"))
+        toxic_sense_v_layout.addWidget(self.toxic_sense_label_desc)
+
+        toxic_sense_layout = QHBoxLayout()
+        toxic_sense_v_layout.addLayout(toxic_sense_layout)
+
+        toxic_sense_slider = QSlider(Qt.Orientation.Horizontal)
+        toxic_sense_layout.addWidget(toxic_sense_slider)
+        toxic_sense_slider.setMinimum(10)
+        toxic_sense_slider.setMaximum(100)
+        toxic_sense_slider.setValue(int(self.toxic_sense * 100))
+        toxic_sense_slider.valueChanged.connect(self.on_change_toxic_sense)
+
+        self.toxic_sense_label_value = QLabel(str(self.toxic_sense))
+        toxic_sense_layout.addWidget(self.toxic_sense_label_value)
 
         # Queue depth
 
@@ -1392,21 +1461,22 @@ class MainWindow(QMainWindow):
             "read_author_names": self.read_author_names,
             "read_platform_names": self.read_platform_names,
             "subscribers_only": self.subscribers_only,
+            "toxic_sense": self.toxic_sense,
             "auto_translate": self.auto_translate,
             "min_msg_length": self.min_msg_length,
             "max_msg_length": self.max_msg_length,
             "buffer_maxsize": self.buffer_maxsize,
             "yt_credentials": self.yt_credentials,
             "twitch_credentials": self.twitch_credentials,
-            "stop_words": self.stop_words,
         }
-        with open("settings.json", "w", encoding="utf-8") as f:
+        with open(resource_path(f"settings.json"), "w", encoding="utf-8") as f:
             json.dump(settings, f, ensure_ascii=False, indent=2)
+
         self.statusBar().showMessage(_(self.language, "Settings saved"), 3000)
 
     def load_settings(self):
         try:
-            with open("settings.json", "r", encoding="utf-8") as f:
+            with open(resource_path(f"settings.json"), "r", encoding="utf-8") as f:
                 settings = json.load(f)
                 self.language = settings.get("language", self.language)
                 self.voice_language = settings.get(
@@ -1430,6 +1500,9 @@ class MainWindow(QMainWindow):
                 self.subscribers_only = settings.get(
                     "subscribers_only", self.subscribers_only
                 )
+                self.toxic_sense = settings.get(
+                    "toxic_sense", self.toxic_sense
+                )
                 self.auto_translate = settings.get(
                     "auto_translate", self.auto_translate
                 )
@@ -1451,14 +1524,61 @@ class MainWindow(QMainWindow):
                 if not isinstance(self.twitch_credentials, dict):
                     self.twitch_credentials = twitch_default_credentials
 
-                self.stop_words = tuple(settings.get("stop_words", self.stop_words))
+                self.stop_words = self.load_stop_words(self.voice_language)
+
         except FileNotFoundError:
             pass  # No settings file, use defaults
+
+    def load_stop_words(self, lang):
+        source_path = resource_path(f"spam_filter/{lang}.txt")
+        try:
+            with open(source_path, "r", encoding="utf-8") as file:
+                return tuple(line.strip() for line in file if line.strip())
+        except FileNotFoundError:
+            self.add_sys_message(
+                author="load_stop_words()",
+                text=f"File with stop-words ({source_path}) not found",
+                status="error"
+            )
+        except Exception as e:
+            self.add_sys_message(
+                author="load_stop_words()",
+                text=f"Filed to read file with stop-words: {e}",
+                status="error"
+            )
+        return tuple()
 
     def closeEvent(self, event):
         self.save_settings()
         sd.stop()
         super().closeEvent(event)
+
+    def init_detoxify(self):
+        try:
+            ensure_stdio_streams()
+            self.add_sys_message(
+                author="Detoxify", text=_(self.language, "detoxify_loading")
+            )
+            if getattr(sys, "frozen", False):
+                cached_checkpoint = find_cached_detoxify_checkpoint("multilingual")
+                if cached_checkpoint:
+                    self.detox_model = Detoxify(
+                        model_type="multilingual",
+                        checkpoint=cached_checkpoint,
+                    )
+                else:
+                    self.detox_model = Detoxify("multilingual")
+            else:
+                self.detox_model = Detoxify("multilingual")
+            self.add_sys_message(
+                author="Detoxify", text=_(self.language, "detoxify_loaded"), status="success"
+            )
+        except Exception as e:
+            self.add_sys_message(
+                author="Detoxify",
+                text=f"{_(self.language, "detoxify_loading_failed")}. {e}",
+                status="error",
+            )
 
     def init_silero(self):
         self.add_sys_message(author="Silero", text=_(self.language, "silero_loading"))
@@ -1497,7 +1617,7 @@ class MainWindow(QMainWindow):
                         speaker=MODELS[self.voice_language],
                         trust_repo=True,
                         force_reload=False,
-                            verbose=False,
+                        verbose=False,
                     )
 
             self.add_sys_message(
@@ -1533,18 +1653,18 @@ class MainWindow(QMainWindow):
 
         emoji_pattern = re.compile(
             "["
-            "\U0001F1E6-\U0001F1FF"  # flags
-            "\U0001F300-\U0001F5FF"  # symbols & pictographs
-            "\U0001F600-\U0001F64F"  # emoticons
-            "\U0001F680-\U0001F6FF"  # transport & map
-            "\U0001F700-\U0001F77F"
-            "\U0001F780-\U0001F7FF"
-            "\U0001F800-\U0001F8FF"
-            "\U0001F900-\U0001F9FF"  # supplemental symbols
-            "\U0001FA00-\U0001FAFF"
-            "\U00002700-\U000027BF"
-            "\U00002600-\U000026FF"
-            "\U000024C2-\U0001F251"
+            "\U0001f1e6-\U0001f1ff"  # flags
+            "\U0001f300-\U0001f5ff"  # symbols & pictographs
+            "\U0001f600-\U0001f64f"  # emoticons
+            "\U0001f680-\U0001f6ff"  # transport & map
+            "\U0001f700-\U0001f77f"
+            "\U0001f780-\U0001f7ff"
+            "\U0001f800-\U0001f8ff"
+            "\U0001f900-\U0001f9ff"  # supplemental symbols
+            "\U0001fa00-\U0001faff"
+            "\U00002700-\U000027bf"
+            "\U00002600-\U000026ff"
+            "\U000024c2-\U0001f251"
             "]+",
             flags=re.UNICODE,
         )
@@ -1591,11 +1711,11 @@ class MainWindow(QMainWindow):
 
         return False
 
-    def contains_stop_words(self, text):
+    def contains_stop_words(self, text: str):
         """Check for stop words"""
-        text_lower = text.lower()
-        for word in self.stop_words:
-            if word.lower() in text_lower:
+        text_words = text.split(" ")
+        for word in text_words:
+            if word in self.stop_words:
                 return True
         return False
 
@@ -1636,15 +1756,26 @@ class MainWindow(QMainWindow):
 
         if self.contains_stop_words(cleaned_text):
             self.add_message(
-                platform=platform, author=author, text=message, color="gray"
+                platform=platform, author=author, text=f"[{_(self.language, "Stop words")}] {message}", color="gray"
             )
             return
 
         if self.is_spam(platform, author, cleaned_text):
             self.add_message(
-                platform=platform, author=author, text=message, color="gray"
+                platform=platform, author=author, text=f"[{_(self.language, "SPAM")}] {message}", color="gray"
             )
             return
+        
+        if self.detox_model:
+            sentiment = self.detox_model.predict(cleaned_text)
+            detox_key = max(sentiment, key=sentiment.get)
+            detox_value = sentiment[detox_key]
+            if detox_value > self.toxic_sense:
+                self.add_message(
+                    platform=platform, author=author, text=f"[{_(self.language, str(detox_key).replace("_", " ").capitalize())}] {message}", color="gray"
+                )
+                return
+
 
         if self.auto_translate:
             cleaned_text = self._translate_text(cleaned_text, self.voice_language)
@@ -1853,5 +1984,3 @@ def main():
 if __name__ == "__main__":
 
     main()
-
-
