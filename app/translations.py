@@ -1,4 +1,9 @@
+import asyncio
+import inspect
 import locale
+import multiprocessing
+
+from googletrans import Translator
 
 TRANSLATIONS = {
     "en": {
@@ -213,6 +218,9 @@ TRANSLATIONS = {
         "Insult": "Оскорбление",
         "Threat": "Угроза",
         "Sexual explicit": "Сексуальный контент",
+        "The file is corrupted": "Файл повреждён",
+        "File with stop-words not found": "Файл стоп-слов не найден",
+        "Failed to read stop-words file": "Ошибка чтения файла стоп-слов",
     },
 }
 
@@ -232,3 +240,32 @@ LANG_CODES = {"en": "English", "ru": "Russian"}
 def _(lang, key):
     """Simple translation helper"""
     return TRANSLATIONS.get(lang, {}).get(key, key)
+
+
+def _proc_translate_external(q, txt, dst):
+    """Module-level worker for multiprocessing spawn on Windows."""
+    try:
+        tr = Translator()
+        r = tr.translate(txt, dest=dst)
+        if inspect.isawaitable(r):
+            r = asyncio.run(r)
+        q.put(getattr(r, "text", txt))
+    except Exception as e:
+        try:
+            q.put({"__err__": str(e)})
+        except Exception:
+            pass
+
+
+def translate_text(text, dest):
+    try:
+        q = multiprocessing.Queue()
+        _proc_translate_external(q, text, dest)
+        return q.get_nowait()
+    except Exception as e:
+        # self.add_sys_message(
+        #     author="_translate_text()",
+        #     text=f"{_(self.language, 'Failed to translate text')}. {e}",
+        #     status="error",
+        # )
+        return text
