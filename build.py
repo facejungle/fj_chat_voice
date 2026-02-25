@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Optimized build script for FJ Chat to Speech
-Supports: Windows (.exe), Linux, and macOS (.app)
+Supports: Windows (.exe), Linux, and macOS
 """
 
 import os
@@ -175,7 +175,8 @@ def clean_build_dirs():
 
 
 def create_spec_file():
-    """Create PyInstaller spec file with proper icon handling"""
+    """Create single-file PyInstaller spec for all platforms"""
+
     icon_path = ensure_icons()
 
     data_files = []
@@ -187,6 +188,7 @@ def create_spec_file():
         ("spam_filter/ru.txt", "spam_filter"),
         ("spam_filter/en.txt", "spam_filter"),
     ]
+
     for src, dst in stop_words_files:
         if os.path.exists(src):
             data_files.append((src, dst))
@@ -215,27 +217,7 @@ a = Analysis(
 )
 
 pyz = PYZ(a.pure, cipher=block_cipher)
-"""
 
-    if PLATFORM == "Darwin":
-        spec_content += f"""
-app = BUNDLE(
-    a,
-    name='{FILE_NAME}.app',
-    icon="{icon_path}",
-    bundle_identifier=None,
-    info_plist={{
-        'NSPrincipalClass': 'NSApplication',
-        'NSHighResolutionCapable': True,
-        'CFBundleShortVersionString': '{APP_VERSION}',
-        'CFBundleVersion': '{APP_VERSION}',
-        'CFBundleName': '{APP_NAME}',
-        'CFBundleDisplayName': '{APP_NAME}',
-    }},
-)
-"""
-    else:
-        spec_content += f"""
 exe = EXE(
     pyz,
     a.scripts,
@@ -260,7 +242,8 @@ exe = EXE(
 )
 """
 
-    spec_filename = f"{FILE_NAME}.spec" if PLATFORM != "Darwin" else f"{APP_NAME}.spec"
+    spec_filename = f"{FILE_NAME}.spec"
+
     with open(spec_filename, "w", encoding="utf-8") as f:
         f.write(spec_content)
 
@@ -322,12 +305,12 @@ def build():
         print(f"\n[SUCCESS] Build completed: dist/")
 
         if PLATFORM == "Darwin":
-            app_path = f"dist/{APP_NAME}.app"
+            app_path = f"dist/{FILE_NAME}"
             if os.path.exists(app_path):
                 print(f"[OK] Created macOS bundle: {app_path}")
         elif PLATFORM == "Windows":
             exe_path = f"dist/{FILE_NAME}.exe"
-        else:
+        elif PLATFORM == "Linux":
             exe_path = f"dist/{FILE_NAME}"
             create_launcher_script()
             if os.path.exists(exe_path):
@@ -341,16 +324,16 @@ def build():
             print(f"[OK] Created tarball: {archive_path}")
 
         if PLATFORM == "Darwin":
-            zip_path = f"dist/{FILE_NAME}.zip"
-            if os.path.exists(zip_path):
-                size_mb = os.path.getsize(zip_path) / (1024 * 1024)
+            app_path = f"dist/{FILE_NAME}"
+            if os.path.exists(app_path):
+                size_mb = os.path.getsize(app_path) / (1024 * 1024)
                 print(f"   Bundle size: {size_mb:.2f} MB")
-        if PLATFORM == "Windows":
+        elif PLATFORM == "Windows":
             exe_path = f"dist/{FILE_NAME}.exe"
             if os.path.exists(exe_path):
                 size_mb = os.path.getsize(exe_path) / (1024 * 1024)
                 print(f"   Size: {size_mb:.2f} MB")
-        else:
+        elif PLATFORM == "Linux":
             exe_path = f"dist/{FILE_NAME}"
             archive_path = f"dist/{FILE_NAME}.tar.gz"
             if os.path.exists(exe_path):
