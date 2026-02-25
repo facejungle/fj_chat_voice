@@ -296,7 +296,15 @@ def install_dependencies():
 
     # Install dependencies
     subprocess.run([pip_path, "install", "pillow"], check=True)
-    subprocess.run([pip_path, "install", "-r", "torch.requirements.txt"], check=True)
+    if PLATFORM == "Darwin":
+        # For macOS, install PyTorch without CUDA
+        subprocess.run([
+            pip_path, "install",
+            "torch==2.8.0",
+            "torchaudio==2.8.0"
+        ], check=True)
+    else:
+        subprocess.run([pip_path, "install", "-r", "torch.requirements.txt"], check=True)
     subprocess.run([pip_path, "install", "-r", "requirements.txt"], check=True)
     
     print("[PKG] Installing PyInstaller...")
