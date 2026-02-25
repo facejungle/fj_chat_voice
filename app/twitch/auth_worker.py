@@ -4,7 +4,7 @@ import time
 
 from PyQt6.QtCore import QThread, pyqtSignal
 
-from app.translations import _
+from app.translations import _, translate_text
 
 
 class AuthWorker(QThread):
@@ -109,7 +109,9 @@ class AuthWorker(QThread):
         except requests.exceptions.ConnectionError:
             self.error_signal.emit(f"❌ {_(self.lang, 'Connection error')}")
         except Exception as e:
-            self.error_signal.emit(f"❌ {_(self.lang, 'Unexpected error')}: {e}")
+            self.error_signal.emit(
+                f"❌ {_(self.lang, 'Unexpected error')}: {translate_text(str(e), self.lang)}"
+            )
 
     def get_user_nickname(self, access_token):
         try:
@@ -128,7 +130,9 @@ class AuthWorker(QThread):
                     return str(data["data"][0]["login"])
             return None
         except Exception as e:
-            self.error_signal.emit(f"{_(self.lang, 'Failed to get nickname')}: {e}")
+            self.error_signal.emit(
+                f"{_(self.lang, 'Failed to get nickname')}: {translate_text(str(e), self.lang)}"
+            )
             return None
 
     @staticmethod

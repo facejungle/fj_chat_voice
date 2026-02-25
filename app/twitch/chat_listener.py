@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 
 import requests
 
-from app.translations import _
+from app.translations import _, translate_text
 
 
 class TwitchChatListener:
@@ -45,20 +45,26 @@ class TwitchChatListener:
             self.token = self.on_expiries_access()
             return True
         except Exception as e:
-            self.on_error(f"{_(self.lang, 'connection_failed')}. {e}")
+            self.on_error(
+                f"{_(self.lang, 'connection_failed')}. {translate_text(str(e), self.lang)}"
+            )
             return False
 
     def _send_command(self, command):
         try:
             self.sock.send(f"{command}\r\n".encode("utf-8"))
         except Exception as e:
-            self.on_error(f"{_(self.lang, "Error send a command")} {command}. {e}")
+            self.on_error(
+                f"{_(self.lang, "Error send a command")} {command}. {translate_text(str(e), self.lang)}"
+            )
 
     def _recv(self):
         try:
             return self.sock.recv(4096).decode("utf-8", errors="ignore")
         except Exception as e:
-            self.on_error(f"{_(self.lang, "Error recv data")}. {e}")
+            self.on_error(
+                f"{_(self.lang, "Error recv data")}. {translate_text(str(e), self.lang)}"
+            )
 
     def _parse_channel(self, channel_input):
         if not channel_input:
@@ -174,7 +180,9 @@ class TwitchChatListener:
                 return
 
             except Exception as e:
-                self.on_error(f"{_(self.lang, "connection_failed")}. {e}")
+                self.on_error(
+                    f"{_(self.lang, "connection_failed")}. {translate_text(str(e), self.lang)}"
+                )
                 return
 
     def disconnect(self):
@@ -211,7 +219,9 @@ class TwitchChatListener:
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
-            print(f"[TwitchChatListener] API error: {e}")
+            print(
+                f"[TwitchChatListener] API error: {translate_text(str(e), self.lang)}"
+            )
             return None
 
     def _get_user_info(self, username):
@@ -280,7 +290,9 @@ class TwitchChatListener:
                         "tags": {},
                     }
         except Exception as e:
-            self.on_error(f"{_(self.lang, "Error parsing message")}. {e}")
+            self.on_error(
+                f"{_(self.lang, "Error parsing message")}. {translate_text(str(e), self.lang)}"
+            )
 
         return None
 
@@ -353,7 +365,9 @@ class TwitchChatListener:
             except Exception as e:
                 if self._is_stopping:
                     break
-                self.on_error(f"{_(self.lang, "error_fetch_messages")}. {e}")
+                self.on_error(
+                    f"{_(self.lang, "error_fetch_messages")}. {translate_text(str(e), self.lang)}"
+                )
                 errors += 1
                 sleep(1 * errors)
             finally:
@@ -366,7 +380,9 @@ class TwitchChatListener:
             self.listen_thread.start()
             return True
         except Exception as e:
-            self.on_error(f"{_(self.lang, "Runtime error")}. {e}")
+            self.on_error(
+                f"{_(self.lang, "Runtime error")}. {translate_text(str(e), self.lang)}"
+            )
             return False
 
     def stop(self):

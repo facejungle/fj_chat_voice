@@ -6,7 +6,7 @@ import pytchat
 from pytchat import util
 import urllib
 
-from app.translations import _
+from app.translations import _, translate_text
 
 _CHANNEL_PATTERNS = (
     re.compile(r'"channelId":"(UC[a-zA-Z0-9_-]{22})"'),
@@ -73,7 +73,7 @@ class YouTubeChatParser:
         self.video_id = None
 
     def _connect(self):
-        delay = 1
+        delay = 0.5
         errors = 0
 
         try:
@@ -103,7 +103,9 @@ class YouTubeChatParser:
                         errors = 0
 
                 except Exception as e:
-                    self.on_error(f"{_(self.lang, "error_fetch_messages")}. {str(e)}")
+                    self.on_error(
+                        f"{_(self.lang, "error_fetch_messages")}. {translate_text(str(e), self.lang)}"
+                    )
                     errors += 1
 
                 if errors >= 5:
@@ -115,7 +117,9 @@ class YouTubeChatParser:
                 self.is_connected = False
 
         except Exception as e:
-            self.on_error(f"{_(self.lang, "connection_failed")}. {str(e)}")
+            self.on_error(
+                f"{_(self.lang, "connection_failed")}. {translate_text(str(e), self.lang)}"
+            )
         finally:
             self.disconnect()
 
@@ -150,7 +154,9 @@ class YouTubeChatParser:
                             video_id = path_parts[video_index + 1]
 
         except Exception as e:
-            self.on_error(f"{_(self.lang, "not_determine_video_id")}. {str(e)}")
+            self.on_error(
+                f"{_(self.lang, "not_determine_video_id")}. {translate_text(str(e), self.lang)}"
+            )
             self.disconnect()
             return
 

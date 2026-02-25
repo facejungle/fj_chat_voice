@@ -3,7 +3,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 import urllib
 
-from app.translations import _
+from app.translations import _, translate_text
 
 YT_API_FIELDS = (
     "nextPageToken,pollingIntervalMillis,"
@@ -56,7 +56,9 @@ class YouTubeChatListener:
                 sleep(delay * max(1, errors))
 
         except Exception as e:
-            self.on_error(f"{_(self.lang, "chat_listener_error")}. {str(e)}")
+            self.on_error(
+                f"{_(self.lang, "chat_listener_error")}. {translate_text(str(e), self.lang)}"
+            )
 
         finally:
             self.disconnect()
@@ -119,11 +121,15 @@ class YouTubeChatListener:
 
         except HttpError as e:
             is_error = True
-            self.on_error(f"{_(self.lang, "error_fetch_messages")}. {e.reason}")
+            self.on_error(
+                f"{_(self.lang, "error_fetch_messages")}. {translate_text(str(e.reason), self.lang)}"
+            )
 
         except Exception as e:
             is_error = True
-            self.on_error(f"{_(self.lang, "error_fetch_messages")}. {str(e)}")
+            self.on_error(
+                f"{_(self.lang, "error_fetch_messages")}. {translate_text(str(e), self.lang)}"
+            )
 
         return next_token, is_error
 
@@ -143,11 +149,15 @@ class YouTubeChatListener:
             return True
 
         except HttpError as e:
-            self.on_error(f"{_(self.lang, "connection_failed")}. {e.reason}")
+            self.on_error(
+                f"{_(self.lang, "connection_failed")}. {translate_text(str(e.reason), self.lang)}"
+            )
             return False
 
         except Exception as e:
-            self.on_error(f"{_(self.lang, "connection_failed")}. {str(e)}")
+            self.on_error(
+                f"{_(self.lang, "connection_failed")}. {translate_text(str(e), self.lang)}"
+            )
             return False
 
     def _parse_video_id(self):
@@ -172,7 +182,9 @@ class YouTubeChatListener:
                             video_id = path_parts[video_index + 1]
 
         except Exception as e:
-            self.on_error(f"{_(self.lang, "not_determine_video_id")}. {str(e)}")
+            self.on_error(
+                f"{_(self.lang, "not_determine_video_id")}. {translate_text(str(e), self.lang)}"
+            )
             return
 
         return video_id
@@ -192,7 +204,11 @@ class YouTubeChatListener:
                 self.on_error(_(self.lang, "video_not_found"))
 
         except HttpError as e:
-            self.on_error(f"{_(self.lang, "not_determine_chat_id")}. {e.reason}")
+            self.on_error(
+                f"{_(self.lang, "not_determine_chat_id")}. {translate_text(str(e.reason), self.lang)}"
+            )
 
         except Exception as e:
-            self.on_error(f"{_(self.lang, "not_determine_chat_id")}. {str(e)}")
+            self.on_error(
+                f"{_(self.lang, "not_determine_chat_id")}. {translate_text(str(e), self.lang)}"
+            )
