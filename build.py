@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Optimized build script for FJ Chat to Speech
-Supports: Windows (.exe) and Linux
+Supports: Windows (.exe), Linux, and macOS (.app)
 """
 
 import os
@@ -16,46 +16,18 @@ from app.constants import APP_VERSION, APP_NAME
 
 MAIN_SCRIPT = "main.py"
 PLATFORM = platform.system()
-FILE_NAME = (
-    f"fj_chat_to_speech_{APP_VERSION}_windows"
-    if PLATFORM == "Windows"
-    else f"fj_chat_to_speech_{APP_VERSION}_linux"
-)
+
+# Platform-specific filename
+if PLATFORM == "Windows":
+    FILE_NAME = f"fj_chat_to_speech_{APP_VERSION}_windows"
+elif PLATFORM == "Darwin":  # macOS
+    FILE_NAME = f"fj_chat_to_speech_{APP_VERSION}_macos"
+else:  # Linux
+    FILE_NAME = f"fj_chat_to_speech_{APP_VERSION}_linux"
 
 ICON_PATH = "img/icon.png"
 ICON_PATH_WINDOWS = "img/icon.ico"
 ICON_PATH_MAC = "img/icon.icns"
-
-
-def ensure_windows_icon():
-    """Convert PNG to ICO if needed"""
-    if PLATFORM == "Windows" and not os.path.exists(ICON_PATH_WINDOWS):
-        if os.path.exists(ICON_PATH):
-            try:
-                from PIL import Image
-
-                img = Image.open(ICON_PATH)
-                img.save(
-                    ICON_PATH_WINDOWS,
-                    sizes=[
-                        (16, 16),
-                        (32, 32),
-                        (48, 48),
-                        (64, 64),
-                        (128, 128),
-                        (256, 256),
-                    ],
-                )
-                print(f"✓ Created Windows icon: {ICON_PATH_WINDOWS}")
-                return ICON_PATH_WINDOWS
-            except ImportError:
-                print("⚠️ PIL not installed, skipping icon conversion")
-                return ICON_PATH
-            except Exception as e:
-                print(f"⚠️ Failed to convert icon: {e}")
-                return ICON_PATH
-    return ICON_PATH_WINDOWS if os.path.exists(ICON_PATH_WINDOWS) else ICON_PATH
-
 
 HIDDEN_IMPORTS = [
     "collections",
@@ -73,7 +45,6 @@ HIDDEN_IMPORTS = [
     "time",
     "typing",
     "hashlib",
-    # "googleapiclient",
     "num2words",
     "torch",
     "sounddevice",
@@ -92,6 +63,67 @@ HIDDEN_IMPORTS = [
 
 EXCLUDES = []
 
+def ensure_icons():
+    """Convert PNG to platform-specific formats if needed"""
+    if PLATFORM == "Windows" and not os.path.exists(ICON_PATH_WINDOWS):
+        if os.path.exists(ICON_PATH):
+            try:
+                from PIL import Image
+                img = Image.open(ICON_PATH)
+                img.save(
+                    ICON_PATH_WINDOWS,
+                    sizes=[
+                        (16, 16), (32, 32), (48, 48), (64, 64),
+                        (128, 128), (256, 256)
+                    ],
+                )
+                print(f"✓ Created Windows icon: {ICON_PATH_WINDOWS}")
+                return ICON_PATH_WINDOWS
+            except Exception as e:
+                print(f"⚠️ Failed to convert Windows icon: {e}")
+                
+    elif PLATFORM == "Darwin" and not os.path.exists(ICON_PATH_MAC):
+        if os.path.exists(ICON_PATH):
+            try:
+                # For macOS, we need to create an iconset
+                iconset_dir = "img/icon.iconset"
+                os.makedirs(iconset_dir, exist_ok=True)
+                
+                from PIL import Image
+                img = Image.open(ICON_PATH)
+                
+                # Generate different sizes for macOS
+                sizes = [16, 32, 64, 128, 256, 512, 1024]
+                for size in sizes:
+                    # Regular size
+                    resized = img.resize((size, size), Image.Resampling.LANCZOS)
+                    resized.save(f"{iconset_dir}/icon_{size}x{size}.png")
+                    
+                    # Retina size (2x)
+                    if size * 2 <= 1024:
+                        resized_2x = img.resize((size*2, size*2), Image.Resampling.LANCZOS)
+                        resized_2x.save(f"{iconset_dir}/icon_{size}x{size}@2x.png")
+                
+                # Convert iconset to icns
+                subprocess.run([
+                    "iconutil", "-c", "icns", iconset_dir,
+                    "-o", ICON_PATH_MAC
+                ], check=True)
+                
+                # Clean up
+                shutil.rmtree(iconset_dir)
+                print(f"✓ Created macOS icon: {ICON_PATH_MAC}")
+                return ICON_PATH_MAC
+                
+            except Exception as e:
+                print(f"⚠️ Failed to convert macOS icon: {e}")
+    
+    # Return appropriate icon path
+    if PLATFORM == "Windows" and os.path.exists(ICON_PATH_WINDOWS):
+        return ICON_PATH_WINDOWS
+    elif PLATFORM == "Darwin" and os.path.exists(ICON_PATH_MAC):
+        return ICON_PATH_MAC
+    return ICON_PATH
 
 def create_virtual_env():
     """Create virtual environment for building"""
@@ -118,7 +150,6 @@ def create_virtual_env():
 
     return venv_path, pip_path, python_path
 
-
 def clean_build_dirs():
     """Clean build directories"""
     dirs_to_clean = ["build", "dist", "__pycache__"]
@@ -132,21 +163,17 @@ def clean_build_dirs():
 
     print("✓ Build directories cleaned")
 
-
 def create_spec_file():
     """Create PyInstaller spec file with proper icon handling"""
-    icon_data = []
+    icon_path = ensure_icons()
+    
     data_files = []
-    icon_path = ICON_PATH
-
+    
+    # Add icon to data files
     if os.path.exists(icon_path):
-        icon_data = [(icon_path, "img")]
-
-        if PLATFORM == "Windows" and os.path.exists(ICON_PATH_WINDOWS):
-            icon_data.append((ICON_PATH_WINDOWS, "img"))
-            icon_path = ICON_PATH_WINDOWS
-    data_files.extend(icon_data)
-
+        data_files.append((icon_path, "img"))
+    
+    # Add stop words files
     stop_words_files = [
         ("spam_filter/ru.txt", "spam_filter"),
         ("spam_filter/en.txt", "spam_filter"),
@@ -160,6 +187,7 @@ def create_spec_file():
     excludes_str = str(EXCLUDES).replace("'", '"')
     hidden_imports_str = str(HIDDEN_IMPORTS).replace("'", '"')
 
+    # Base spec content
     spec_content = f"""# -*- mode: python ; coding: utf-8 -*-
 
 block_cipher = None
@@ -179,7 +207,52 @@ a = Analysis(
 )
 
 pyz = PYZ(a.pure, cipher=block_cipher)
+"""
 
+    # Platform-specific EXE/Bundle creation
+    if PLATFORM == "Darwin":
+        # macOS creates an .app bundle
+        spec_content += f"""
+exe = EXE(
+    pyz,
+    a.scripts,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    [],
+    name='{FILE_NAME}',
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    runtime_tmpdir=None,
+    console=False,
+    disable_windowed_traceback=False,
+    argv_emulation=False,
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
+    icon="{icon_path}",
+)
+
+app = BUNDLE(
+    exe,
+    name='{APP_NAME}.app',
+    icon="{icon_path}",
+    bundle_identifier=None,
+    info_plist={{
+        'NSPrincipalClass': 'NSApplication',
+        'NSHighResolutionCapable': True,
+        'CFBundleShortVersionString': '{APP_VERSION}',
+        'CFBundleVersion': '{APP_VERSION}',
+        'CFBundleName': '{APP_NAME}',
+    }},
+)
+"""
+    else:
+        # Windows and Linux create executables
+        spec_content += f"""
 exe = EXE(
     pyz,
     a.scripts,
@@ -203,10 +276,12 @@ exe = EXE(
     icon="{icon_path}",
 )
 """
-    with open(f"{FILE_NAME}.spec", "w", encoding="utf-8") as f:
-        f.write(spec_content)
-    return f"{FILE_NAME}.spec"
 
+    spec_filename = f"{FILE_NAME}.spec" if PLATFORM != "Darwin" else f"{APP_NAME}.spec"
+    with open(spec_filename, "w", encoding="utf-8") as f:
+        f.write(spec_content)
+    
+    return spec_filename
 
 def install_dependencies():
     """Install required dependencies including Silero"""
@@ -214,18 +289,31 @@ def install_dependencies():
 
     venv_result = create_virtual_env()
     if not venv_result:
-        return
+        return None, None, None
+    
     venv_path, pip_path, python_path = venv_result
 
+    # Install dependencies
+    subprocess.run([pip_path, "install", "--upgrade", "pip"], check=True)
     subprocess.run([pip_path, "install", "pillow"], check=True)
-    subprocess.run([pip_path, "install", "-r", "torch.requirements.txt"], check=True)
+    
+    # Handle PyTorch installation based on platform
+    if PLATFORM == "Darwin":
+        # For macOS, install PyTorch without CUDA
+        subprocess.run([
+            pip_path, "install",
+            "torch",
+            "torchaudio"
+        ], check=True)
+    else:
+        # For Windows/Linux with CUDA support
+        subprocess.run([pip_path, "install", "-r", "torch.requirements.txt"], check=True)
+    
     subprocess.run([pip_path, "install", "-r", "requirements.txt"], check=True)
-
     print("📦 Installing PyInstaller...")
     subprocess.run([pip_path, "install", "pyinstaller"], check=True)
 
     return venv_path, pip_path, python_path
-
 
 def build():
     """Build with UPX compression"""
@@ -234,9 +322,8 @@ def build():
     print("=" * 50)
 
     venv_path, pip_path, python_path = install_dependencies()
-
-    if PLATFORM == "Windows":
-        ensure_windows_icon()
+    if not venv_path:
+        return False
 
     if PLATFORM == "Windows":
         pyinstaller_path = os.path.join(venv_path, "Scripts", "pyinstaller.exe")
@@ -248,61 +335,52 @@ def build():
 
     spec_file = create_spec_file()
 
-    # if PLATFORM == "Windows":
-    #     create_windows_manifest()
-
     cmd = [pyinstaller_path, "--clean", "--noconfirm", spec_file]
 
     try:
-        subprocess.run(cmd, check=True, timeout=1200)
+        subprocess.run(cmd, check=True, timeout=1800)  # 30 minutes timeout
 
-        print(f"\n✅ Executable built: dist/")
+        print(f"\n✅ Build completed: dist/")
 
-        if PLATFORM == "Windows":
+        # Post-build handling
+        if PLATFORM == "Darwin":
+            app_path = f"dist/{APP_NAME}.app"
+            if os.path.exists(app_path):
+                # Create a zip of the .app bundle
+                shutil.make_archive(
+                    f"dist/{FILE_NAME}",
+                    'zip',
+                    "dist",
+                    f"{APP_NAME}.app"
+                )
+                print(f"✓ Created macOS bundle: {app_path}")
+        elif PLATFORM == "Windows":
             exe_path = f"dist/{FILE_NAME}.exe"
-        else:
+        else:  # Linux
             exe_path = f"dist/{FILE_NAME}"
             create_launcher_script()
             os.chmod(exe_path, os.stat(exe_path).st_mode | stat.S_IEXEC)
 
-        if os.path.exists(exe_path):
-            size_mb = os.path.getsize(exe_path) / (1024 * 1024)
-            print(f"   Size: {size_mb:.2f} MB")
+        # Show size information
+        if PLATFORM == "Darwin":
+            zip_path = f"dist/{FILE_NAME}.zip"
+            if os.path.exists(zip_path):
+                size_mb = os.path.getsize(zip_path) / (1024 * 1024)
+                print(f"   Bundle size: {size_mb:.2f} MB")
+        else:
+            exe_path = f"dist/{FILE_NAME}.exe" if PLATFORM == "Windows" else f"dist/{FILE_NAME}"
+            if os.path.exists(exe_path):
+                size_mb = os.path.getsize(exe_path) / (1024 * 1024)
+                print(f"   Size: {size_mb:.2f} MB")
 
         return True
+        
     except subprocess.TimeoutExpired:
         print("\n❌ Build timed out")
         return False
     except Exception as e:
         print(f"\n❌ Build failed: {e}")
         return False
-
-
-# def create_windows_manifest():
-#     """Create Windows manifest file for better icon integration"""
-#     manifest_content = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-# <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
-#     <assemblyIdentity
-#         version="1.0.5"
-#         processorArchitecture="*"
-#         name="FJ Chat Voice"
-#         type="win32"
-#     />
-#     <description>FJ Chat Voice Application</description>
-#     <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
-#         <security>
-#             <requestedPrivileges>
-#                 <requestedExecutionLevel level="asInvoker" uiAccess="false"/>
-#             </requestedPrivileges>
-#         </security>
-#     </trustInfo>
-# </assembly>"""
-
-#     manifest_path = "app.manifest"
-#     with open(manifest_path, "w", encoding="utf-8") as f:
-#         f.write(manifest_content)
-#     print("✓ Windows manifest created")
-
 
 def create_launcher_script():
     """Create launcher script for Linux"""
@@ -323,43 +401,30 @@ cd "$SCRIPT_DIR"
     os.chmod(launcher_path, st.st_mode | stat.S_IEXEC)
     print("✓ Launcher script created: dist/run_chat_voice.sh")
 
-
-def verify_icon():
-    """Verify icon exists and is valid"""
+def verify_assets():
+    """Verify required assets exist"""
+    assets_ok = True
+    
+    if not os.path.exists(MAIN_SCRIPT):
+        print(f"❌ {MAIN_SCRIPT} not found")
+        assets_ok = False
+    
     if not os.path.exists(ICON_PATH):
         print(f"⚠️ Icon not found at {ICON_PATH}")
-        return False
-
-    # Check if icon is a valid image file
-    try:
-        from PIL import Image
-
-        img = Image.open(ICON_PATH)
-        print(f"✓ Icon found: {ICON_PATH} ({img.size[0]}x{img.size[1]} pixels)")
-        return True
-    except Exception as e:
-        print(f"⚠️ Icon file may be corrupted: {e}")
-        return False
-
+    
+    return assets_ok
 
 def main():
     """Main function"""
     print("=" * 60)
-    print(f"Optimized build of {APP_NAME}")
+    print(f"Optimized build of {APP_NAME} v{APP_VERSION} for {PLATFORM}")
     print("=" * 60)
 
-    # Check if running in correct directory
-    if not os.path.exists(MAIN_SCRIPT):
-        print(f"❌ {MAIN_SCRIPT} not found in current directory")
+    if not verify_assets():
         return
 
-    # Verify icon exists
-    verify_icon()
-
-    # Clean directories
     clean_build_dirs()
-
-    # Build
+    
     success = build()
 
     print("\n" + "=" * 60)
@@ -370,30 +435,19 @@ def main():
         print("\n✅ Build completed successfully!")
         print(f"   Files are located in the 'dist/' directory")
 
-        # Show final size
-        if PLATFORM == "Windows":
-            exe_path = f"dist/{FILE_NAME}.exe"
-        else:
-            exe_path = f"dist/{FILE_NAME}"
-
-        if os.path.exists(exe_path):
-            size_mb = os.path.getsize(exe_path) / (1024 * 1024)
-            if size_mb > 1024:
-                size_gb = size_mb / 1024
-                print(f"   Size: {size_gb:.2f} GB")
-            else:
-                print(f"   Size: {size_mb:.2f} MB")
-
+        # List all files in dist
         print("\n📁 Output directory: dist/")
         print("   Files:")
         for file in sorted(Path("dist").iterdir()):
             if file.is_file():
                 size = file.stat().st_size / (1024 * 1024)
                 print(f"   - {file.name} ({size:.2f} MB)")
-
+            elif file.is_dir() and PLATFORM == "Darwin":
+                # For macOS .app bundle
+                size = sum(f.stat().st_size for f in file.rglob('*')) / (1024 * 1024)
+                print(f"   - {file.name}/ ({size:.2f} MB)")
     else:
         print("\n❌ Build failed")
-
 
 if __name__ == "__main__":
     main()
