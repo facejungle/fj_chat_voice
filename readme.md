@@ -22,8 +22,7 @@ Implemented features:
 
 ## Text-to-speech for YouTube streams
 
-- Generating [Google API Keys](https://github.com/facejungle/fj_chat_to_speech/wiki/Google-API-Keys)
-- The Google API has a limit on the number of requests per day, typically quota equal 10,000. View your quota: [Google Console: Quotas](https://console.cloud.google.com/iam-admin/quotas)
+- To convert text from a chat to speech , simply paste the link to the active stream
 
 ## Text-to-speech for Twitch streams
 
