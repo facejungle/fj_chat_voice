@@ -2,35 +2,42 @@
 
 <img alt="FJ Chat to Speech" src="./docs/app_0.png" width="700">
 
-This is a program for real-time chat voiceover using the Silero model.
+FJ Chat to Speech is an open-source desktop application that converts live chat messages from YouTube and Twitch streams into real-time speech.
 
-It uses the Google API to retrieve messages from YouTube chat and converts them to speech. The key acquisition method is described in the instructions.
-The first launch may take 1-2 minutes, as the program downloads the model and caches it for subsequent launches.
+## <a href="https://github.com/facejungle/fj_chat_to_speech/releases/latest/" target="_blank">Download</a>
 
-- The program is completely free.
-- The program interface is Russian and English, and it also supports voiceover in Russian and English.
+The application combines:
 
-Implemented features:
+- YouTube and Twitch chat integration
+- `Silero` text-to-speech models (local inference)
+- `Detoxify` toxicity filtering (local inference)
+- Custom spam filtering tools
 
-- Voice selection
-- Spam filter and stop words list
-- Adjustable voiceover volume
-- Adjustable voiceover speed
-- Adjustable number of messages in the queue
-- Speak numbers in messages
-- Translation of chat messages into speech language
+## Key Features
 
-## Text-to-speech for YouTube streams
+- Voice selection (English and Russian)
+- Adjustable speech volume
+- Adjustable speech speed
+- Pronunciation of numbers
+- Optional translation of messages before speech
+- Stop-word list editor
+- Toxicity filtering (Detoxify)
+- English and Russian interface
+- Free and open-source
 
-- To convert text from a chat to speech , simply paste the link to the active stream
+### YouTube Streams
 
-## Text-to-speech for Twitch streams
+To connect to a broadcast, simply paste the link to the active live broadcast and click "Connect"
 
-- Generating [Twitch CLIENT ID](https://github.com/facejungle/fj_chat_to_speech/wiki/Twitch-CLIENT-ID)
+### Twitch Streams
+
+For Twitch, simply enter the channel name (or URL) of an active stream. FJ Chat to Speech will connect to Twitch’s chat service using your Client ID and start reading incoming chat messages. (Beforehand, you must register a Twitch app and copy the Client ID from the Twitch Developer Console into the program.) The interface will handle reconnects if the stream goes offline and comes back.
+
+- <a href="https://github.com/facejungle/fj_chat_to_speech/wiki/Twitch-CLIENT-ID" target="_blank">How to create Client ID</a>
 
 ## Launch from source code
 
-```
+```bash
 git clone https://github.com/facejungle/fj_chat_to_speech.git
 cd fj_chat_to_speech
 
@@ -42,8 +49,13 @@ python main.py
 
 ## Build
 
-```
+```bash
 python build.py
+cd dist
+ls
 ```
 
-## Thanks for <a href="https://github.com/snakers4/silero-models/" target="_blank">Silero</a> :)
+## Thanks for <a href="https://github.com/snakers4/silero-models/" target="_blank">Silero</a> and <a href="https://github.com/unitaryai/detoxify" target="_blank">Detoxify</a>
+
+- **Silero Models**: We use Silero’s open-source TTS models, known for natural-sounding voices and fast CPU performance
+- **Detoxify**: Toxicity filtering is powered by the Detoxify library, which provides pretrained models to flag and filter toxic comments
