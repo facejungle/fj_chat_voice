@@ -46,7 +46,9 @@ def get_user_data_dir() -> str:
         appdata = os.getenv("APPDATA")
         if appdata:
             return os.path.join(appdata, APP_NAME)
-    return os.path.join(os.path.expanduser("~"), f".{APP_NAME.lower().replace(" ", "_")}")
+    return os.path.join(
+        os.path.expanduser("~"), f".{APP_NAME.lower().replace(" ", "_")}"
+    )
 
 
 def get_settings_path() -> str:
