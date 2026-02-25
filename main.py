@@ -312,9 +312,9 @@ class MainWindow(QMainWindow):
         self.connect_twitch_button = QPushButton(_(self.language, "Connect"))
         self.connect_twitch_button.clicked.connect(self.on_click_connect_twitch)
         twitch_layout.addWidget(self.connect_twitch_button)
-        self.configure_twitch_button = QPushButton(_(self.language, "Configure"))
-        self.configure_twitch_button.clicked.connect(self.on_configure_twitch)
-        twitch_layout.addWidget(self.configure_twitch_button)
+        # self.configure_twitch_button = QPushButton(_(self.language, "Configure"))
+        # self.configure_twitch_button.clicked.connect(self.on_configure_twitch)
+        # twitch_layout.addWidget(self.configure_twitch_button)
         connections_grid.addLayout(twitch_layout, 0, 1)
 
     def setup_pause_button_color(self):
@@ -520,7 +520,7 @@ class MainWindow(QMainWindow):
         self.connect_twitch_button.setText(
             _(self.language, "Connected" if self.twitch_is_connected else "Connect")
         )
-        self.configure_twitch_button.setText(_(self.language, "Configure"))
+        # self.configure_twitch_button.setText(_(self.language, "Configure"))
 
         self.chat_header_label.setText(_(self.language, "Message Log"))
         self.auto_scroll_checkbox.setText(_(self.language, "Auto-scroll"))
@@ -1600,7 +1600,7 @@ class MainWindow(QMainWindow):
             return
         self.processed_messages.add(msg_id)
 
-        cleaned_text = clean_message(message)
+        cleaned_text = clean_message(message, self.language)
         if not cleaned_text:
             return
 
@@ -1637,7 +1637,7 @@ class MainWindow(QMainWindow):
 
         if self.auto_translate:
             cleaned_text = translate_text(cleaned_text, self.voice_language)
-            cleaned_text = clean_message(cleaned_text)
+            cleaned_text = clean_message(cleaned_text, self.language)
             if not cleaned_text:
                 return
 
