@@ -11,6 +11,7 @@ import subprocess
 import platform
 from pathlib import Path
 import stat
+import tarfile
 
 from app.constants import APP_VERSION, APP_NAME
 
@@ -361,7 +362,6 @@ def build():
 
             launcher_path = "dist/run_chat_voice.sh"
             archive_path = f"dist/{FILE_NAME}.tar.gz"
-            import tarfile
             with tarfile.open(archive_path, "w:gz") as tar:
                 tar.add(exe_path, arcname=os.path.basename(exe_path))
                 tar.add(launcher_path, arcname=os.path.basename(launcher_path))
