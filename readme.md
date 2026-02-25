@@ -50,6 +50,9 @@ python main.py
 ## Build
 
 ```bash
+git clone https://github.com/facejungle/fj_chat_to_speech.git
+cd fj_chat_to_speech
+
 python build.py
 cd dist
 ls
