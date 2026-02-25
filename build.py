@@ -359,17 +359,35 @@ def build():
             if os.path.exists(exe_path):
                 os.chmod(exe_path, os.stat(exe_path).st_mode | stat.S_IEXEC)
 
+            launcher_path = "dist/run_chat_voice.sh"
+            archive_path = f"dist/{FILE_NAME}.tar.gz"
+            import tarfile
+            with tarfile.open(archive_path, "w:gz") as tar:
+                tar.add(exe_path, arcname=os.path.basename(exe_path))
+                tar.add(launcher_path, arcname=os.path.basename(launcher_path))
+            print(f"[OK] Created tarball: {archive_path}")
+
         # Show size information
         if PLATFORM == "Darwin":
             zip_path = f"dist/{FILE_NAME}.zip"
             if os.path.exists(zip_path):
                 size_mb = os.path.getsize(zip_path) / (1024 * 1024)
                 print(f"   Bundle size: {size_mb:.2f} MB")
-        else:
-            exe_path = f"dist/{FILE_NAME}.exe" if PLATFORM == "Windows" else f"dist/{FILE_NAME}"
+        if PLATFORM == "Windows":
+            exe_path = f"dist/{FILE_NAME}.exe"
             if os.path.exists(exe_path):
                 size_mb = os.path.getsize(exe_path) / (1024 * 1024)
                 print(f"   Size: {size_mb:.2f} MB")
+
+        else:
+            exe_path = f"dist/{FILE_NAME}"
+            archive_path = f"dist/{FILE_NAME}.tar.gz"
+            if os.path.exists(exe_path):
+                size_mb = os.path.getsize(exe_path) / (1024 * 1024)
+                print(f"   Binary size: {size_mb:.2f} MB")
+            if os.path.exists(archive_path):
+                size_mb = os.path.getsize(archive_path) / (1024 * 1024)
+                print(f"   Archive size: {size_mb:.2f} MB")
 
         return True
         
