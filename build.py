@@ -59,6 +59,7 @@ HIDDEN_IMPORTS = [
     "omegaconf",
     "silero",
     "silero.utils",
+    "detoxify",
 ]
 
 EXCLUDES = []
