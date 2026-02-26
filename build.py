@@ -13,9 +13,8 @@ from pathlib import Path
 import stat
 import tarfile
 
-
 from app.constants import APP_VERSION, APP_NAME
-from app.utils import icon_path, resource_path
+
 
 MAIN_SCRIPT = "main.py"
 PLATFORM = platform.system()
@@ -27,7 +26,7 @@ elif PLATFORM == "Darwin":
 else:
     FILE_NAME = f"fj_chat_to_speech_{APP_VERSION}_linux"
 
-ICON_PATH = icon_path()
+ICON_PATH = "img/icon.ico" if PLATFORM == "Windows" else "img/icon.png"
 
 HIDDEN_IMPORTS = [
     "collections",
