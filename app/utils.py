@@ -2,6 +2,7 @@ import colorsys
 from functools import lru_cache
 import hashlib
 import os
+import platform
 import re
 import sys
 
@@ -38,6 +39,13 @@ def resource_path(relative_path: str) -> str:
     """Resolve resource paths for source and PyInstaller onefile builds."""
     base_path = getattr(sys, "_MEIPASS", os.path.abspath("."))
     return os.path.join(base_path, relative_path)
+
+
+def icon_path():
+    if platform.system() == "Windows":
+        return "img/icon.ico"
+    else:
+        return "img/icon.png"
 
 
 def get_user_data_dir() -> str:
