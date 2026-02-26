@@ -11,7 +11,6 @@ num2words==0.5.14
 numpy==2.4.2
 scipy==1.17.0
 
-Pillow
 PyQt6
 requests
 omegaconf
