@@ -235,6 +235,98 @@ DEFAULT_LANGUAGE = (
 )
 LANG_CODES = {"en": "English", "ru": "Russian"}
 
+_CYR_TO_LAT = {
+    "а": "a",
+    "б": "b",
+    "в": "v",
+    "г": "g",
+    "д": "d",
+    "е": "e",
+    "ё": "yo",
+    "ж": "zh",
+    "з": "z",
+    "и": "i",
+    "й": "y",
+    "к": "k",
+    "л": "l",
+    "м": "m",
+    "н": "n",
+    "о": "o",
+    "п": "p",
+    "р": "r",
+    "с": "s",
+    "т": "t",
+    "у": "u",
+    "ф": "f",
+    "х": "kh",
+    "ц": "ts",
+    "ч": "ch",
+    "ш": "sh",
+    "щ": "shch",
+    "ъ": "",
+    "ы": "y",
+    "ь": "",
+    "э": "e",
+    "ю": "yu",
+    "я": "ya",
+}
+
+_LAT_TO_CYR = {
+    "a": "а",
+    "b": "б",
+    "c": "ц",
+    "d": "д",
+    "e": "е",
+    "f": "ф",
+    "g": "г",
+    "h": "х",
+    "i": "и",
+    "j": "й",
+    "k": "к",
+    "l": "л",
+    "m": "м",
+    "n": "н",
+    "o": "о",
+    "p": "п",
+    "q": "к",
+    "r": "р",
+    "s": "с",
+    "t": "т",
+    "u": "у",
+    "v": "в",
+    "w": "в",
+    "x": "кс",
+    "y": "ы",
+    "z": "з",
+}
+
+
+def _map_char_with_case(ch: str, mapping: dict[str, str]) -> str:
+    base = mapping.get(ch.lower())
+    if base is None:
+        return ch
+    if not ch.isalpha():
+        return base
+    if ch.isupper():
+        return base[:1].upper() + base[1:]
+    return base
+
+
+def transliteration(text: str, lang: str) -> str:
+    """
+    Transliterate text to target language.
+
+    lang='en': Cyrillic -> Latin (Привет -> Privet)
+    lang='ru': Latin -> Cyrillic (john -> йохн)
+    """
+    src = str(text or "")
+    target = str(lang or "").strip().lower()
+    if target == "en":
+        return "".join(_map_char_with_case(ch, _CYR_TO_LAT) for ch in src)
+    if target == "ru":
+        return "".join(_map_char_with_case(ch, _LAT_TO_CYR) for ch in src)
+    return src
+
 
 def _(lang, key):
     """Simple translation helper"""
