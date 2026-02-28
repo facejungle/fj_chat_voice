@@ -34,4 +34,4 @@ MODELS = {
     "en": "v3_en",
 }
 
-APP_VERSION = "1.0.9"
+APP_VERSION = "1.0.10"
