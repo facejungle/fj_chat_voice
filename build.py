@@ -15,7 +15,6 @@ import tarfile
 
 from app.constants import APP_VERSION, APP_NAME
 
-
 MAIN_SCRIPT = "main.py"
 PLATFORM = platform.system()
 
