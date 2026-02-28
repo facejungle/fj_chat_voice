@@ -83,7 +83,6 @@ class YouTubeChatParser:
             if chat.is_alive():
                 self.is_connected = True
                 self.on_connect()
-
             while chat.is_alive() and self.is_connected:
                 try:
                     for message in chat.get().sync_items():
