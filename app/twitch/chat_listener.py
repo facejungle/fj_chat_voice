@@ -329,13 +329,28 @@ class TwitchChatListener:
                     msg_data = self._parse_message(line)
 
                     if msg_data:
+                        badges = msg_data.get("badges", "")
+                        tags = msg_data.get("tags", {})
+
+                        is_owner = (
+                            "broadcaster/1" in badges
+                            or tags.get("user-id") == tags.get("room-id")
+                            or str(msg_data["username"]).lower() == self.channel
+                        )
+                        is_staff = (
+                            msg_data["mod"]
+                            or "staff/1" in badges
+                            or "admin/1" in badges
+                            or "global_mod/1" in badges
+                        )
+
                         self.on_message(
                             msg_id=msg_data["id"],
                             author=msg_data["username"],
                             msg=msg_data["message"],
-                            is_sponsor=msg_data["subscriber"],  # Sponsor
-                            is_staff=msg_data["vip"],  # Moderator
-                            is_owner=msg_data["mod"],  # Live broadcast owner
+                            is_sponsor=msg_data["subscriber"],
+                            is_staff=is_staff,
+                            is_owner=is_owner,
                         )
 
                 errors = 0
